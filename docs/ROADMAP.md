@@ -1,12 +1,13 @@
 # O! ONE ENTERTAINMENT — Hoja de ruta
 
 ## Fase 0: base Android TV (0.1.0-alpha01)
-- Kotlin, Jetpack Compose y navegación mediante mando D-pad.
+- Kotlin, Jetpack Compose y navegación mediante mando D-pad, con foco inicial visible y retorno a la última tarjeta al cerrar una sección.
 - Lanzador Leanback para Google TV / Android TV.
 - Identidad O!: anillo blanco, punto celeste y fondo negro.
 - Intro vectorial de unos 8 s, con aparición sincronizada de ONE ENTERTAINMENT.
 - Pantalla inicial honesta: no muestra fuentes ni canales ficticios.
-- Acción de GitHub para compilar una APK de depuración.
+- Gradle Wrapper 8.13 y flujo de GitHub Actions para compilar, ejecutar lint y entregar una APK de depuración por ejecución.
+- Flujo de distribución para `com.ayanabyte.one` con la misma firma entre versiones. Una etiqueta de versión genera un borrador de GitHub Release con la APK y su suma SHA-256 cuando los secretos de firma están configurados.
 - **No hay reproducción de contenidos todavía.**
 
 ## Fase 1: fuentes y reproducción reales

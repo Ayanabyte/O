@@ -3,6 +3,7 @@ name: Android TV · Build APK
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -14,6 +15,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Install JDK 17
         uses: actions/setup-java@v4
         with:
@@ -22,16 +25,87 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
-          packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
-      - name: Setup Gradle 8.13
+          packages: 'platforms;android-36 build-tools;35.0.0'
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.13'
-      - name: Build Debug APK
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
-      - name: Upload APK
+      - name: Build and lint debug APK
+        run: ./gradlew :app:assembleDebug :app:lintDebug --no-daemon --stacktrace
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: O-One-Entertainment-0.1.0-alpha01-debug
+          name: O-One-Entertainment-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+      - name: Build release APK
+        if: github.ref_type == 'tag'
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+      - name: Sign and verify release APK
+        if: github.ref_type == 'tag'
+        env:
+          ONE_SIGNING_KEYSTORE_BASE64: ${{ secrets.ONE_SIGNING_KEYSTORE_BASE64 }}
+          ONE_SIGNING_PASSWORD: ${{ secrets.ONE_SIGNING_PASSWORD }}
+        run: |
+          release_dir=app/build/outputs/apk/release
+          version=$(jq -er '.elements[0].versionName' "$release_dir/output-metadata.json")
+          if [[ "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "::error::The tag must match the APK version (v$version)."
+            exit 1
+          fi
+          if [[ -z "$ONE_SIGNING_KEYSTORE_BASE64" || -z "$ONE_SIGNING_PASSWORD" ]]; then
+            echo '::error::Configure the signing secrets documented in README.md.'
+            exit 1
+          fi
+          umask 077
+          keystore=$(mktemp)
+          trap 'rm -f "$keystore"' EXIT
+          printf '%s' "$ONE_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+
+          mkdir -p dist
+          apk="O-One-Entertainment-$version.apk"
+          apksigner="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          "$apksigner" sign --ks "$keystore" --ks-type PKCS12 --ks-key-alias one-entertainment \
+            --ks-pass env:ONE_SIGNING_PASSWORD --out "dist/$apk" "$release_dir/app-release-unsigned.apk"
+          verification=$("$apksigner" verify --verbose --print-certs "dist/$apk")
+          printf '%s\n' "$verification"
+          expected_cert=9fa356c6fe79794789bfc8e40c00cb42e2915f84f12dba46bfd79b669c816d52
+          if ! grep -Fxq "Signer #1 certificate SHA-256 digest: $expected_cert" <<< "$verification"; then
+            echo '::error::The signing certificate differs from the certificate used on TV.'
+            exit 1
+          fi
+          (cd dist && sha256sum "$apk" > "$apk.sha256")
+      - name: Upload signed release APK
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: O-One-Entertainment-release
+          path: dist/
+          if-no-files-found: error
+
+  draft-release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: O-One-Entertainment-release
+          path: dist
+      - name: Prepare GitHub Release draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          apk="dist/O-One-Entertainment-${tag#v}.apk"
+          if draft=$(gh release view "$tag" --json isDraft --jq '.isDraft'); then
+            if [[ "$draft" == 'true' ]]; then
+              gh release upload "$tag" "$apk" "$apk.sha256" --clobber
+            fi
+          else
+            flags=()
+            if [[ "$tag" == *-* ]]; then flags+=(--prerelease); fi
+            gh release create "$tag" "$apk" "$apk.sha256" --verify-tag --draft \
+              "${flags[@]}" --title "O! ONE ENTERTAINMENT $tag" --generate-notes
+          fi

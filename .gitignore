@@ -16,4 +16,5 @@ captures/
 *.aab
 *.jks
 *.keystore
+*.p12
 key.properties
