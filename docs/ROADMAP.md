@@ -8,6 +8,7 @@
 - Pantalla inicial honesta: no muestra fuentes ni canales ficticios.
 - Gradle Wrapper 8.13 y flujo de GitHub Actions para compilar, ejecutar lint y entregar una APK de depuración por ejecución.
 - Flujo de distribución para `com.ayanabyte.one` con la misma firma entre versiones. Una etiqueta de versión genera un borrador de GitHub Release con la APK y su suma SHA-256 cuando los secretos de firma están configurados.
+- Validado en una TCL con Google TV y Android 11 por ADB: lanzador Leanback, opening, inicio, foco en las cinco tarjetas y navegación con las teclas del mando. Atrás omite el opening o regresa a la tarjeta desde la sección. Desde el inicio, Atrás cierra la actividad.
 - **No hay reproducción de contenidos todavía.**
 
 ## Fase 1: fuentes y reproducción reales
