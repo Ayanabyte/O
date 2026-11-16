@@ -1,0 +1,47 @@
+# O! ONE ENTERTAINMENT — Hoja de ruta
+
+## Fase 0: base Android TV (0.1.0-alpha01)
+- Kotlin, Jetpack Compose y navegación mediante mando D-pad.
+- Lanzador Leanback para Google TV / Android TV.
+- Identidad O!: anillo blanco, punto celeste y fondo negro.
+- Intro vectorial de unos 8 s, con aparición sincronizada de ONE ENTERTAINMENT.
+- Pantalla inicial honesta: no muestra fuentes ni canales ficticios.
+- Acción de GitHub para compilar una APK de depuración.
+- **No hay reproducción de contenidos todavía.**
+
+## Fase 1: fuentes y reproducción reales
+- Detectar sintonizadores de TV TDT y radios TDT cuando Android TV exponga APIs compatibles.
+- Importar listas IPTV M3U/M3U8, con manejo de credenciales y pruebas de conexión.
+- Radio IPTV y enlaces directos.
+- Reproductor Media3 para fuentes IPTV, con pistas de audio y subtítulos.
+- Agrupación de canales duplicados y prioridad de fuente TDT cuando funcione.
+- Recuperación de fallos y cambio de fuente, sin pruebas periódicas innecesarias.
+
+## Fase 2: guía y navegación
+- XMLTV múltiple con prioridades, asignación automática fiable y edición manual.
+- Guía EPG con preview cuando el sistema lo permita y controles D-pad.
+- Favoritos, listas, grupos, ordenación y opciones por canal.
+- LOVEStv y HbbTV **solo si el dispositivo y las integraciones oficiales lo permiten**.
+
+## Fase 3: contenido bajo demanda
+- IPTV VOD, USB y NAS en biblioteca unificada, con duplicados agrupados.
+- Películas y series, colecciones y filtros, historial y continuar viendo.
+- Trakt.tv, artwork externo y tráilers bajo demanda.
+
+## Fase 4: TV avanzada
+- Timeshift local o recuperación desde fuentes compatibles.
+- Grabaciones, programación EPG/repetitiva y conflictos.
+- Catch-up IPTV cuando el proveedor lo soporte.
+- Accesibilidad, control parental y configuración avanzada.
+
+## Diseño de marca aprobado
+- Marca: **O!**
+- Extensión: **ONE ENTERTAINMENT**
+- Inglés: **All you love. One screen.**
+- Español: **Todo lo que te gusta. Una sola pantalla.**
+- Fondo puro negro; texto principal blanco y secundario gris; único acento celeste.
+- No neón, cristales, gradientes, 3D ni paneles laterales permanentes.
+- Logo original O! → la barra de exclamación se desvanece mientras el punto desciende hasta debajo de O. El nombre aparece en paralelo. El eslogan aparece después.
+- Audio deseado (no integrado): estática de televisor analógico que se sintoniza progresivamente, terminando sin campanas ni música.
+
+Las fases son objetivos, **no una promesa de soporte en todos los televisores**. Primero validar hardware y permisos de Android TV.
