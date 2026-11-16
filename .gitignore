@@ -1,5 +1,6 @@
 # Android Studio / Gradle
 .gradle/
+.kotlin/
 .idea/
 *.iml
 local.properties
@@ -16,4 +17,5 @@ captures/
 *.aab
 *.jks
 *.keystore
+*.p12
 key.properties
