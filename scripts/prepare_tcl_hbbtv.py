@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+"""Rebuild the historical, embedded TCL HbbTV bridge in O!'s opt-in source set.
+
+Input is the pinned public Channelplus v5.3.14 checkout. No vendor APK is
+launched: this reconstructs its same-process Tbrowser + HbbtvServer integration
+over O!'s existing TvView. The stock O! flavor is not modified.
+"""
+from __future__ import annotations
+
+import hashlib
+import shutil
+import subprocess
+import sys
+import zipfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+LEGACY = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else None
+if LEGACY is None or not (LEGACY / "tools/hbbtv/fix_5312_direct_activity.py").exists():
+    raise SystemExit("Usage: python scripts/prepare_tcl_hbbtv.py <Channelplus-v5.3.14-checkout>")
+archive = LEGACY / "ci/channelplus-5.3.7-overlay.zip"
+expected = "fea649552eb21f7a5df958a20dbb1cf6915b186b701a346aca498be434b8173b"
+if hashlib.sha256(archive.read_bytes()).hexdigest() != expected:
+    raise SystemExit("Historical overlay SHA-256 mismatch; abort")
+with zipfile.ZipFile(archive) as z:
+    z.extractall(LEGACY)
+
+SRC = LEGACY / "owntv_tdt/app"
+r = SRC / "src/main/java/tv/own/channelplus/lovestvprobe/HbbTvRuntimeService.java"
+def replace(original: str, replacement: str, label: str) -> None:
+    text = r.read_text(encoding="utf-8")
+    if text.count(original) != 1:
+        raise RuntimeError("Expected exactly one historical match: " + label)
+    r.write_text(text.replace(original, replacement), encoding="utf-8")
+
+def run_old(name: str) -> None:
+    subprocess.run([sys.executable, "tools/hbbtv/" + name], cwd=LEGACY, check=True)
+
+# Repair the old remote and its startup watchdog before mounting the Activity browser.
+run_old("fix_539_key_routing.py")
+run_old("fix_539_reliability.py")
+
+# TCL native HbbTV used a transparent, visible Activity-owned root during init.
+replace("private Object engine,browser,initListener;",
+        "private Object engine,browser,initListener,eventNotify,eventListener;", "event refs")
+replace("root=new FrameLayout(windowContext); root.setBackgroundColor(Color.TRANSPARENT); root.setAlpha(0f); root.setFocusable(false);",
+        "root=new FrameLayout(windowContext); root.setBackgroundColor(Color.TRANSPARENT); root.setAlpha(1f); root.setVisibility(View.VISIBLE); root.setFocusable(false); root.setClipChildren(false); root.setClipToPadding(false);",
+        "visible Activity root")
+replace("        initializing=true;\n        main.removeCallbacks(timeout);",
+        "        initializing=true;\n        visibility();\n        main.removeCallbacks(timeout);",
+        "native browser init")
+replace("ExperimentalAuthorization.begin(this,authorized->main.post(()->{",
+        "ExperimentalAuthorization.begin(windowContext!=null?windowContext:this,authorized->main.post(()->{",
+        "authorization Activity context")
+replace("                prepareKeys();\n                browser=singleton(\"com.tcl.tbrowser.Tbrowser\");",
+        "                prepareKeys();\n                registerBroadcastEvents();\n                browser=singleton(\"com.tcl.tbrowser.Tbrowser\");",
+        "broadcaster events")
+replace("    private void prepareKeys() throws ReflectiveOperationException {",
+        """    private void registerBroadcastEvents() {
+        try {
+            Class<?> type=Class.forName("com.tcl.hbbtv.HbbtvEventNotify");
+            Class<?> listener=Class.forName("com.tcl.hbbtv.HbbtvEventListener");
+            eventNotify=type.getMethod("getInstance",Context.class).invoke(null,windowContext);
+            eventListener=Proxy.newProxyInstance(listener.getClassLoader(),new Class<?>[]{listener},
+                (proxy,method,args)->{
+                    if(method.getDeclaringClass()==Object.class) return objectMethod(proxy,method,args);
+                    Log.i(TAG,"TCL broadcaster event="+method.getName()+" channel="+channelId);
+                    return defaultValue(method.getReturnType());
+                });
+            type.getMethod("registerHbbtvEventListener",listener).invoke(eventNotify,eventListener);
+        } catch(Exception | LinkageError error) {
+            Log.w(TAG,"Broadcaster event listener unavailable",error);
+        }
+    }
+    private void prepareKeys() throws ReflectiveOperationException {""",
+        "event listener")
+replace("private void visibility() { if(root!=null) root.setAlpha(running && ready && !hidden ? 1f : 0f); }",
+        "private void visibility() { if(root!=null) { boolean show=ready && !hidden && (initializing || running); root.setAlpha(show ? 1f : 0f); if(show) root.bringToFront(); } }",
+        "transparent root visibility")
+replace("            visibility(); reply(STARTED,new Bundle()); inspect.run();",
+        "            visibility(); Log.i(TAG,\"Native Tbrowser started within O! Activity\"); reply(STARTED,new Bundle()); inspect.run();",
+        "startup report")
+
+# Recreate the documented 5.3.12/13/14 integration, in the original order.
+run_old("fix_5312_direct_activity.py")
+run_old("fix_5313_playback_controls.py")
+run_old("fix_5314_seek_live.py")
+
+target = ROOT / "app/src/tclHbbtv"
+copy_source = [
+    "src/main/java/tv/own/owntv/features/hbbtv/HbbTvActivityHost.java",
+    "src/main/java/tv/own/owntv/features/hbbtv/HbbTvInputGate.java",
+    "src/main/java/tv/own/owntv/features/hbbtv/HbbTvProtocol.java",
+    "src/main/java/tv/own/owntv/features/hbbtv/HbbTvPlayerView.java",
+    "src/main/java/tv/own/channelplus/lovestvprobe/HbbTvRuntimeService.java",
+]
+for path in copy_source:
+    src = SRC / path
+    dst = target / "java" / path.split("java/", 1)[1]
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, dst)
+for name in ("libsectionprobe.so", "libuaprofile.so"):
+    src = SRC / "src/main/jniLibs/armeabi-v7a" / name
+    dst = target / "jniLibs/armeabi-v7a" / name
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, dst)
+jar = ROOT / "app/libs/lovestv-runtime.jar"
+jar.parent.mkdir(parents=True, exist_ok=True)
+shutil.copyfile(SRC / "libs/lovestv-runtime.jar", jar)
+asset = target / "assets/lovestv_playback_145.js"
+asset.parent.mkdir(parents=True, exist_ok=True)
+shutil.copyfile(SRC / "src/hbbtv32/assets/lovestv_playback_145.js", asset)
+
+# Keep a traceable source, but do not put the old product UI into O!.
+runtime = target / "java/tv/own/channelplus/lovestvprobe/HbbTvRuntimeService.java"
+view = target / "java/tv/own/owntv/features/hbbtv/HbbTvPlayerView.java"
+assert "activityParent.addView(root" in runtime.read_text()
+assert "installPlaybackControls" in runtime.read_text()
+assert "HbbTvActivityHost.attach(activity)" in view.read_text()
+print("Prepared TCL-only embedded HbbTV variant; original stable O! unaffected")

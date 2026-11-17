@@ -29,23 +29,23 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Build and lint debug APK
-        run: ./gradlew :app:assembleDebug :app:lintDebug --no-daemon --stacktrace
+        run: ./gradlew :app:assembleStandardDebug :app:lintStandardDebug --no-daemon --stacktrace
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: O-One-Entertainment-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/standard/debug/app-standard-debug.apk
           if-no-files-found: error
       - name: Build release APK
         if: github.ref_type == 'tag'
-        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
+        run: ./gradlew :app:assembleStandardRelease --no-daemon --stacktrace
       - name: Sign and verify release APK
         if: github.ref_type == 'tag'
         env:
           ONE_SIGNING_KEYSTORE_BASE64: ${{ secrets.ONE_SIGNING_KEYSTORE_BASE64 }}
           ONE_SIGNING_PASSWORD: ${{ secrets.ONE_SIGNING_PASSWORD }}
         run: |
-          release_dir=app/build/outputs/apk/release
+          release_dir=app/build/outputs/apk/standard/release
           version=$(jq -er '.elements[0].versionName' "$release_dir/output-metadata.json")
           if [[ "$GITHUB_REF_NAME" != "v$version" ]]; then
             echo "::error::The tag must match the APK version (v$version)."
@@ -64,7 +64,7 @@ jobs:
           apk="O-One-Entertainment-$version.apk"
           apksigner="$ANDROID_HOME/build-tools/35.0.0/apksigner"
           "$apksigner" sign --ks "$keystore" --ks-type PKCS12 --ks-key-alias one-entertainment \
-            --ks-pass env:ONE_SIGNING_PASSWORD --out "dist/$apk" "$release_dir/app-release-unsigned.apk"
+            --ks-pass env:ONE_SIGNING_PASSWORD --out "dist/$apk" "$release_dir/app-standard-release-unsigned.apk"
           verification=$("$apksigner" verify --verbose --print-certs "dist/$apk")
           printf '%s\n' "$verification"
           expected_cert=9fa356c6fe79794789bfc8e40c00cb42e2915f84f12dba46bfd79b669c816d52

@@ -1,0 +1,41 @@
+name: O! · TCL embedded HbbTV experiment
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'scripts/prepare_tcl_hbbtv.py'
+      - '.github/workflows/tcl-hbbtv-experiment.yml'
+permissions:
+  contents: read
+jobs:
+  tcl-hbbtv32:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve pinned historical TCL integration sources
+        uses: actions/checkout@v4
+        with:
+          repository: Ayanabyte/Channelplus
+          ref: v5.3.14
+          path: legacy
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platforms;android-36 build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Prepare historical TCL engine and embedded Activity browser
+        run: python3 scripts/prepare_tcl_hbbtv.py legacy
+      - name: Build experimental 32-bit TCL APK
+        run: ./gradlew :app:assembleTclHbbtvDebug :app:lintTclHbbtvDebug --no-daemon --stacktrace
+      - name: Upload experimental APK (different app ID)
+        uses: actions/upload-artifact@v4
+        with:
+          name: O-TCL-HbbTV-experimental-debug
+          path: app/build/outputs/apk/tclHbbtv/debug/app-tclHbbtv-debug.apk
+          if-no-files-found: error
