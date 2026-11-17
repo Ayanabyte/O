@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
@@ -36,6 +38,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.material3.Text
 import com.ayanabyte.one.R
+import com.ayanabyte.one.ui.FocusButton
 import kotlinx.coroutines.delay
 
 private enum class Reception(val message: Int? = null, val retry: Boolean = false) {
@@ -46,17 +49,70 @@ private enum class Reception(val message: Int? = null, val retry: Boolean = fals
     Timeout(R.string.tdt_timeout, true)
 }
 
+private val tclLoveChannelNames = setOf("la 1 uhd", "la 2 hd", "a3 uhd", "antena 3", "telecinco")
+
+private fun TerrestrialChannel.supportsTclLove(): Boolean =
+    !radio && inputId.startsWith("com.tcl.tvinput/") && name?.trim()?.lowercase() in tclLoveChannelNames
+
 @Composable
 internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int) -> Unit) {
+    val showLoveControl = channel.supportsTclLove()
     val focus = remember { FocusRequester() }
+    val loveControlFocus = remember { FocusRequester() }
     var attempt by remember(channel.id) { mutableIntStateOf(0) }
     var bannerRequest by remember(channel.id) { mutableIntStateOf(0) }
     var bannerVisible by remember(channel.id) { mutableStateOf(true) }
+    var loveFocused by remember(channel.id) { mutableStateOf(false) }
+    var handoffError by remember(channel.id) { mutableStateOf(false) }
     var reception by remember(channel.id, attempt) { mutableStateOf(Reception.Tuning) }
+    val context = LocalContext.current
+    val tvView = remember(context) {
+        TvView(context).apply {
+            isFocusable = false
+            isFocusableInTouchMode = false
+            setZOrderMediaOverlay(true)
+        }
+    }
+    fun showPlaybackControls() {
+        bannerVisible = true
+        bannerRequest++
+    }
+    fun focusLoveControl() {
+        loveControlFocus.requestFocus()
+        bannerRequest++
+    }
+    fun openLove() {
+        Log.i(TdtLog, "LOVEStv handoff requested for ${channel.id}")
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+            setPackage("com.tcl.tv")
+            setDataAndType(TvContract.buildChannelUri(channel.id), "vnd.android.cursor.item/channel")
+        }
+        val resolves = runCatching { context.packageManager.resolveActivity(intent, 0) }.getOrNull() != null
+        if (!resolves) {
+            Log.w(TdtLog, "TCL TV cannot resolve channel ${channel.id}")
+            handoffError = true
+            return
+        }
+        tvView.reset()
+        try {
+            context.startActivity(intent)
+            Log.i(TdtLog, "Opened TCL TV for channel ${channel.id} (${channel.number} ${channel.name})")
+        } catch (error: android.content.ActivityNotFoundException) {
+            Log.w(TdtLog, "TCL TV could not open channel ${channel.id}", error)
+            handoffError = true
+            tvView.tune(channel.inputId, TvContract.buildChannelUri(channel.id))
+            tvView.setStreamVolume(1f)
+        } catch (error: SecurityException) {
+            Log.w(TdtLog, "TCL TV denied channel ${channel.id}", error)
+            handoffError = true
+            tvView.tune(channel.inputId, TvContract.buildChannelUri(channel.id))
+            tvView.setStreamVolume(1f)
+        }
+    }
     LaunchedEffect(Unit) { focus.requestFocus() }
     LaunchedEffect(channel.id, bannerRequest) {
         bannerVisible = true
-        delay(2500)
+        delay(8000)
         bannerVisible = false
     }
     LaunchedEffect(channel.id, attempt, reception) {
@@ -80,9 +136,27 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
                         if (pressed) changeChannel(1)
                         true
                     }
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        if (pressed && showLoveControl) {
+                            Log.i(TdtLog, "LOVEStv control navigation banner=$bannerVisible focused=$loveFocused")
+                            if (bannerVisible) focusLoveControl() else showPlaybackControls()
+                        }
+                        true
+                    }
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        if (pressed && loveFocused) focus.requestFocus()
+                        true
+                    }
                     KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                         if (pressed) {
-                            if (reception.retry) attempt++ else bannerRequest++
+                            Log.i(TdtLog, "Player select banner=$bannerVisible love=$loveFocused reception=$reception")
+                            when {
+                                loveFocused -> openLove()
+                                reception.retry -> attempt++
+                                !bannerVisible -> showPlaybackControls()
+                                showLoveControl -> focusLoveControl()
+                                else -> bannerRequest++
+                            }
                         }
                         true
                     }
@@ -90,9 +164,7 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
                 }
             }.focusable()
     ) {
-        key(channel.id, attempt) {
-            TunerView(channel) { reception = it }
-        }
+        TunerView(channel, attempt, tvView) { reception = it }
         if (bannerVisible || reception != Reception.Video) {
             val name = channel.name ?: stringResource(R.string.tdt_unnamed)
             val label = channel.number?.let { stringResource(R.string.tdt_channel_label, it, name) } ?: name
@@ -101,8 +173,22 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
                 Text(label, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
                 val message = reception.message ?: if (reception == Reception.Radio) R.string.tdt_radio else null
                 message?.let { Text(stringResource(it), color = Color(0xFFB0B0B0), fontSize = 18.sp) }
+                if (handoffError) {
+                    Text(stringResource(R.string.tdt_loves_unavailable), color = Color(0xFFB0B0B0), fontSize = 16.sp)
+                }
                 if (reception.retry) {
                     Text(stringResource(R.string.tdt_player_retry), color = Color(0xFF4DDCF5), fontSize = 16.sp)
+                }
+                if (showLoveControl) {
+                    Row(Modifier.padding(top = 10.dp)) {
+                        FocusButton(
+                            stringResource(R.string.tdt_loves),
+                            Modifier.focusRequester(loveControlFocus)
+                                .onFocusChanged { loveFocused = it.isFocused }
+                                .background(Color(0xFF151515)).padding(horizontal = 18.dp, vertical = 9.dp),
+                            onClick = ::openLove
+                        )
+                    }
                 }
             }
         }
@@ -110,16 +196,10 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
 }
 
 @Composable
-private fun TunerView(channel: TerrestrialChannel, onReception: (Reception) -> Unit) {
+private fun TunerView(channel: TerrestrialChannel, attempt: Int, tvView: TvView, onReception: (Reception) -> Unit) {
     val context = LocalContext.current
-    val tvView = remember(context) {
-        TvView(context).apply {
-            isFocusable = false
-            isFocusableInTouchMode = false
-        }
-    }
     AndroidView(factory = { tvView }, modifier = Modifier.fillMaxSize())
-    LifecycleResumeEffect(tvView) {
+    LifecycleResumeEffect(tvView, channel.id, attempt) {
         var active = true
         var audioSelected = false
         var contentBlocked = false

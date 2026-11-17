@@ -5,7 +5,7 @@
 
 Aplicación **Android TV** en **Kotlin**. Este repositorio comienza desde cero y no reutiliza código de aplicaciones anteriores.
 
-> **Estado:** `0.2.0-alpha01`, primera integración del sintonizador TDT de Android TV.
+> **Estado:** `0.3.0-alpha01`, TDT y acceso externo provisional a LOVEStv en la TCL probada.
 
 ## Identidad
 
@@ -22,7 +22,7 @@ Usa **OK** en la lista para sintonizar a pantalla completa. Durante la reproducc
 
 Consulta [`docs/TDT.md`](docs/TDT.md) para los resultados en la TCL y los permisos del fabricante, y [`docs/ROADMAP.md`](docs/ROADMAP.md) para las siguientes fases.
 
-LOVEStv se verificó en el reproductor de TCL. Los resultados por canal y el límite de HbbTV en Android 11 están en [la investigación de HbbTV](docs/HBBTV.md).
+En los canales TCL que se han verificado, pulsa **OK** para mostrar los controles, **→** para enfocar **LOVEStv en TCL** y **OK** para abrir el mismo canal en `com.tcl.tv`. Después, pulsa **Azul** en el mando para entrar en el servicio interactivo. La radio y los canales sin compatibilidad comprobada no muestran el control. Para regresar, abre O! desde Google TV. El reproductor de O! todavía no integra HbbTV y no vuelve automáticamente desde TCL. [Límites y resultados por canal](docs/HBBTV.md).
 
 ## Compilación
 
@@ -43,7 +43,7 @@ Con el ordenador y la TV en la misma red, activa la depuración en las opciones 
 ```powershell
 adb connect IP_DE_LA_TV:5555
 adb devices -l
-adb -s IP_DE_LA_TV:5555 install -r .\O-One-Entertainment-0.2.0-alpha01.apk
+adb -s IP_DE_LA_TV:5555 install -r .\O-One-Entertainment-0.3.0-alpha01.apk
 ```
 
 Si la TV muestra **Depuración inalámbrica** con código de vinculación, ejecuta `adb pair IP_DE_LA_TV:PUERTO_DE_VINCULACION` y luego `adb connect IP_DE_LA_TV:PUERTO_DE_DEPURACION`. Usa ese segundo puerto al indicar el dispositivo con `-s`. Abre **O! ONE ENTERTAINMENT** desde las aplicaciones del televisor después de ver `Success`.
@@ -57,7 +57,7 @@ Configura en GitHub Actions los secretos de la clave de distribución original:
 
 Conserva una copia segura del almacén y de su contraseña fuera del repositorio. El flujo verifica que el certificado coincide con el de la primera APK firmada antes de preparar un borrador.
 
-Cuando se apruebe una versión, etiqueta en `main` el commit verificado con `v` seguido de su `versionName`, por ejemplo `v0.2.0-alpha01`, y sube la etiqueta. GitHub Actions vuelve a compilar, firma la APK y crea un borrador en **Releases** con la APK y su SHA-256. Revisa el borrador y publícalo para habilitar la descarga pública.
+Cuando se apruebe una versión, etiqueta en `main` el commit verificado con `v` seguido de su `versionName`, por ejemplo `v0.3.0-alpha01`, y sube la etiqueta. GitHub Actions vuelve a compilar, firma la APK y crea un borrador en **Releases** con la APK y su SHA-256. Revisa el borrador y publícalo para habilitar la descarga pública.
 
 Para preparar localmente la misma APK firmada en Windows, carga `ONE_SIGNING_PASSWORD` en el entorno desde el gestor de secretos y usa el almacén original:
 
@@ -65,9 +65,9 @@ Para preparar localmente la misma APK firmada en Windows, carga `ONE_SIGNING_PAS
 .\gradlew.bat :app:assembleRelease
 $apksigner = "$env:ANDROID_HOME\build-tools\35.0.0\apksigner.bat"
 & $apksigner sign --ks 'RUTA_AL_ALMACEN.p12' --ks-type PKCS12 --ks-key-alias one-entertainment `
-  --ks-pass env:ONE_SIGNING_PASSWORD --out O-One-Entertainment-0.2.0-alpha01.apk `
+  --ks-pass env:ONE_SIGNING_PASSWORD --out O-One-Entertainment-0.3.0-alpha01.apk `
   app/build/outputs/apk/release/app-release-unsigned.apk
-& $apksigner verify --verbose --print-certs O-One-Entertainment-0.2.0-alpha01.apk
+& $apksigner verify --verbose --print-certs O-One-Entertainment-0.3.0-alpha01.apk
 Remove-Item Env:ONE_SIGNING_PASSWORD
 ```
 
