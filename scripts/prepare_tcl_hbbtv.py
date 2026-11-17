@@ -133,9 +133,9 @@ source = source.replace(anchor, """
             + " failed=" + failed + " error=" + oneLastFailure;
     }
 """ + anchor)
-old = 'private void fail(String reason,Throwable error) { Log.w(TAG,reason,error); failed=true; disconnect(); }'
-assert source.count(old) == 1
-source = source.replace(old, 'private void fail(String reason,Throwable error) { oneLastFailure=reason; Log.w(TAG,reason,error); failed=true; disconnect(); }')
+needle = 'private void fail(String reason,Throwable error) {'
+assert source.count(needle) == 1
+source = source.replace(needle, needle + ' oneLastFailure=reason;')
 view.write_text(source, encoding="utf-8")
 
 assert "activityParent.addView(root" in runtime.read_text()
