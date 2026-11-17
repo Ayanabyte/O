@@ -131,6 +131,13 @@ service_source = service_source.replace(old_reply, """
         Bundle info=new Bundle(); info.putString("oneFailure",detail);
         reply(FAILED,info); cleanup();""")
 service.write_text(service_source,encoding="utf-8")
+# CRITICAL: copy_source already copied this file to O!.
+# Copy the modified runtime AGAIN, so O! actually sends oneFailure
+# instead of the old FAILED message with an empty Bundle.
+embedded_runtime = target / "java/tv/own/channelplus/lovestvprobe/HbbTvRuntimeService.java"
+shutil.copyfile(service, embedded_runtime)
+assert 'info.putString("oneFailure",detail)' in embedded_runtime.read_text(encoding="utf-8")
+assert 'reply(FAILED,new Bundle())' not in embedded_runtime.read_text(encoding="utf-8")
 
 # Keep a traceable source, but do not put the old product UI into O!.
 runtime = target / "java/tv/own/channelplus/lovestvprobe/HbbTvRuntimeService.java"
@@ -162,6 +169,7 @@ assert source.count(needle) == 1
 source = source.replace(needle, needle + ' oneLastFailure=reason;')
 view.write_text(source, encoding="utf-8")
 
+assert "oneFailure" in runtime.read_text(), "Error details were not packaged into O!"
 assert "activityParent.addView(root" in runtime.read_text()
 assert "installPlaybackControls" in runtime.read_text()
 assert "HbbTvActivityHost.attach(activity)" in view.read_text()

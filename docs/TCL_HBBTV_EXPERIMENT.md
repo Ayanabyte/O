@@ -74,3 +74,10 @@ La revisión DIAG 2 se instala como aplicación **O! LOVEStv DIAG 2**
 `O! DIAG 2 · ERROR TCL REAL`. Es distinta de las pruebas anteriores:
 si ves el título antiguo o el error genérico «Runtime initialization failed;
 see preceding ChannelplusHbb log», no estás ejecutando esta revisión.
+
+## Revisión DIAG 3 — corrección del archivo empaquetado
+
+DIAG 2 seguía mostrando `TCL HbbTV failed without details` porque el
+script copiaba el Java original a O! antes de inyectar el detalle. DIAG 3
+vuelve a copiarlo tras la modificación y comprueba el archivo empaquetado.
+APK separada `com.ayanabyte.one.hbbtvdiag3` y cabecera `O! DIAG 3`.

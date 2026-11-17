@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           xmlns:tools="http://schemas.android.com/tools">
-    <application android:process="com.tcl.tv" android:label="O! LOVEStv DIAG 2" tools:replace="android:process,android:label">
+    <application android:process="com.tcl.tv" android:label="O! LOVEStv DIAG 3" tools:replace="android:process,android:label">
         <uses-library android:name="com.tcl.hbbtv.HbbtvServer" android:required="false"/>
         <uses-library android:name="com.tcl.tbrowser" android:required="false"/>
         <uses-library android:name="com.tcl.tvmanager" android:required="false"/>
