@@ -52,3 +52,12 @@ prueba visual real en la TCL y pruebas de regresión de TV/radio.**
 Nota: el JS histórico de salto de anuncios depende de una ruta
 `/lovestv3-4.0.0/`; la ruta actual observada fue `/lovestv3-4.0.1/`.
 Esa compatibilidad debe validarse por separado una vez que el motor abra HbbTV.
+
+## Diagnóstico visual (versión experimental)
+
+La variante `tclHbbtv` muestra en la esquina superior derecha los estados
+reales `enabled`, `video`, `jar`, `overlay`, `surface`, `bound`,
+`messenger`, `attached`, `started`, `failed` y `error`, además del
+identificador de entrada TCL. Una captura al sintonizar Antena 3 ayuda a
+localizar el bloqueo sin depender de una terminal ADB. El indicador no
+reemplaza la validación real del aviso LOVEStv, que lo genera la emisora.

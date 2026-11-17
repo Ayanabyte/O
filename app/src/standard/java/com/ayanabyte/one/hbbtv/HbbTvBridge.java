@@ -18,6 +18,7 @@ public final class HbbTvBridge {
     }
     public void update(String inputId, long id, boolean ready, long generation, boolean active) { }
     public boolean handleKey(KeyEvent event) { return false; }
+    public String diagnostics() { return "Standard TV (no HbbTV)"; }
     public void suspend() { }
     public void release() { }
 }

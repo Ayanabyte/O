@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.material3.Text
+import com.ayanabyte.one.BuildConfig
 import com.ayanabyte.one.R
 import com.ayanabyte.one.ui.FocusButton
 import kotlinx.coroutines.delay
@@ -60,6 +61,15 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
     var reception by remember(channel.id, attempt) { mutableStateOf(Reception.Tuning) }
     val context = LocalContext.current
     val hbbtv = remember(context, channel.id, attempt) { HbbTvBridge(context) }
+    var hbbtvStatus by remember(hbbtv) { mutableStateOf("Inicializando HbbTV…") }
+    if (BuildConfig.FLAVOR == "tclHbbtv" && !channel.radio) {
+        LaunchedEffect(hbbtv) {
+            while (true) {
+                hbbtvStatus = hbbtv.diagnostics()
+                delay(900)
+            }
+        }
+    }
     val tvView = hbbtv.tvView
     fun showPlaybackControls() {
         bannerVisible = true
@@ -109,6 +119,13 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
             }.focusable()
     ) {
         TunerView(channel, attempt, hbbtv) { reception = it }
+        if (BuildConfig.FLAVOR == "tclHbbtv" && !channel.radio) {
+            Column(Modifier.align(Alignment.TopEnd).padding(20.dp)
+                .background(Color(0xDD000000)).padding(12.dp)) {
+                Text("O! · Diagnóstico HbbTV", color = Color(0xFF4DDCF5), fontSize = 15.sp)
+                Text(hbbtvStatus, color = Color.White, fontSize = 13.sp)
+            }
+        }
         if (bannerVisible || reception != Reception.Video) {
             val name = channel.name ?: stringResource(R.string.tdt_unnamed)
             val label = channel.number?.let { stringResource(R.string.tdt_channel_label, it, name) } ?: name

@@ -114,6 +114,30 @@ shutil.copyfile(SRC / "src/hbbtv32/assets/lovestv_playback_145.js", asset)
 # Keep a traceable source, but do not put the old product UI into O!.
 runtime = target / "java/tv/own/channelplus/lovestvprobe/HbbTvRuntimeService.java"
 view = target / "java/tv/own/owntv/features/hbbtv/HbbTvPlayerView.java"
+
+# Display a truthful startup trace inside the experimental player, avoiding
+# guessing why LOVEStv's broadcaster hint isn't rendered.
+source = view.read_text(encoding="utf-8")
+anchor = "    public TvView getTvView() { return tvView; }"
+assert source.count(anchor) == 1
+source = source.replace(anchor, """
+    private String oneLastFailure = "none";
+    public String oneDiagnostic() {
+        return "TCL input=" + (input==null ? "(none)" : input)
+            + "\\nvideo=" + ready + " enabled=" + enabled
+            + " 32bit=" + (!Process.is64Bit())
+            + " jar=" + new File("/product/framework/com.tcl.hbbtv.jar").isFile()
+            + "\\noverlay=" + (overlay!=null) + " surface=" + surfaceReady
+            + " bound=" + (connection!=null) + " messenger=" + (remote!=null)
+            + "\\nattached=" + attached + " started=" + started
+            + " failed=" + failed + " error=" + oneLastFailure;
+    }
+""" + anchor)
+old = 'private void fail(String reason,Throwable error) { Log.w(TAG,reason,error); failed=true; disconnect(); }'
+assert source.count(old) == 1
+source = source.replace(old, 'private void fail(String reason,Throwable error) { oneLastFailure=reason; Log.w(TAG,reason,error); failed=true; disconnect(); }')
+view.write_text(source, encoding="utf-8")
+
 assert "activityParent.addView(root" in runtime.read_text()
 assert "installPlaybackControls" in runtime.read_text()
 assert "HbbTvActivityHost.attach(activity)" in view.read_text()

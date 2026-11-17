@@ -30,6 +30,7 @@ public final class HbbTvBridge {
     public boolean handleKey(KeyEvent event) {
         return activity != null && HbbTvPlayerView.dispatch(activity, event);
     }
+    public String diagnostics() { return player.oneDiagnostic(); }
     public void suspend() { player.updateHbbTv(null, -1L, false, -1L, false); }
     public void release() { player.release(); }
 
