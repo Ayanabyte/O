@@ -67,3 +67,10 @@ La compilación de diagnóstico usa temporalmente el identificador
 `com.ayanabyte.one.hbbtvdiag` para coexistir con la prueba previa
 `com.ayanabyte.one.hbbtvtest` y con O! estable. Esto evita conflictos
 entre certificados debug generados por distintos runners de GitHub Actions.
+
+## Identificación inequívoca de la revisión 2
+La revisión DIAG 2 se instala como aplicación **O! LOVEStv DIAG 2**
+(paquete `com.ayanabyte.one.hbbtvdiag2`), con el encabezado
+`O! DIAG 2 · ERROR TCL REAL`. Es distinta de las pruebas anteriores:
+si ves el título antiguo o el error genérico «Runtime initialization failed;
+see preceding ChannelplusHbb log», no estás ejecutando esta revisión.
