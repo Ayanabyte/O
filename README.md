@@ -16,7 +16,7 @@ Aplicación **Android TV** en **Kotlin**. Este repositorio comienza desde cero y
 
 ## Televisión TDT
 
-Entra en **Televisión** y concede a O! permiso para leer las listas de canales. La app usa los canales DVB-T y otros servicios terrestres digitales que el televisor expone a través de Android. Los servicios marcados como solo audio aparecen en **Radio TDT**.
+Entra en **Televisión** y concede a O! permiso para leer las listas de canales. La app usa los canales DVB-T y otros servicios terrestres digitales que el televisor expone a través de Android. Para cambiar entre **Televisión** y **Radio TDT**, sube con el mando desde el primer elemento de la lista y selecciona el grupo.
 
 Usa **OK** en la lista para sintonizar a pantalla completa. Durante la reproducción, **↓/↑** y **Canal +/−** cambian al canal siguiente o anterior. **Atrás** vuelve a la lista y libera la sesión del sintonizador.
 

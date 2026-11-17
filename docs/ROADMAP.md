@@ -12,7 +12,14 @@
 - **No hay reproducción de contenidos todavía.**
 
 ## Fase 1: fuentes y reproducción reales
-- Detectar sintonizadores de TV TDT y radios TDT cuando Android TV exponga APIs compatibles.
+
+### Televisión TDT (`0.2.0-alpha01`)
+
+- Detección y consulta mediante `TvInputManager` y `TvContract`. La TCL registra 57 canales de televisión y 38 emisoras digitales terrestres.
+- Sintonización a pantalla completa, cambio por mando y liberación de la sesión mediante `TvView`. Los servicios, permisos y resultados de la TCL están en [Televisión digital terrestre](TDT.md).
+
+### Fuentes de red pendientes
+
 - Importar listas IPTV M3U/M3U8, con manejo de credenciales y pruebas de conexión.
 - Radio IPTV y enlaces directos.
 - Reproductor Media3 para fuentes IPTV, con pistas de audio y subtítulos.
