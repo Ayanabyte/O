@@ -111,7 +111,7 @@ shutil.copyfile(SRC / "libs/lovestv-runtime.jar", jar)
 # before invoking the manufacturer's real authorization. Adapt only this
 # guard in our own legacy client; TCL's systemAuthorized remains unchanged.
 old_id = b"tv.own.owntv.tdt2"
-new_id = b"com.ayanabyte.one.hbbtvdiag7"
+new_id = b"com.ayanabyte.one.hbbtvdiag6"
 class_path = "tv/own/channelplus/lovestvprobe/ExperimentalAuthorization.class"
 guard = len(old_id).to_bytes(2, "big") + old_id
 replacement = len(new_id).to_bytes(2, "big") + new_id
@@ -263,18 +263,6 @@ replace_runtime_one(
     'oneStage("9: engine started; awaiting broadcaster application"); reply(STARTED,new Bundle()); inspect.run();',
     "startup complete"
 )
-
-# DIAG 7: isolate the failing experimental native CA hook.
-# NativeSection.installCertificates returned -1 before Tbrowser init in DIAG 6.
-# Use Android's *existing* system CA trust without injecting a new CA, bypassing
-# TLS verification, or changing any TCL vendor library. OEM authorization stays.
-legacy_ca='NativeSection.prepareCertificates(windowContext); NativeUA.prepare(windowContext);'
-if service_source.count(legacy_ca)!=1:
-    raise RuntimeError("Unexpected legacy CA hook, refusing blind modification")
-service_source=service_source.replace(legacy_ca,
-    'oneStage("3b: default Android system TLS trust; legacy CA memory hook omitted"); '
-    'Log.i(TAG,"O! DIAG7: no CA injection, system TLS verification unchanged"); '
-    'NativeUA.prepare(windowContext);')
 
 service.write_text(service_source,encoding="utf-8")
 # CRITICAL: copy_source already copied this file to O!.

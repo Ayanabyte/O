@@ -28,7 +28,7 @@ android {
         create("standard") { dimension = "tvEngine" }
         create("tclHbbtv") {
             dimension = "tvEngine"
-            applicationIdSuffix = ".hbbtvdiag7"
+            applicationIdSuffix = ".hbbtvdiag6"
             ndk { abiFilters += listOf("armeabi-v7a") }
         }
     }
