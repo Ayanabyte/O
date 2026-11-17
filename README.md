@@ -22,6 +22,8 @@ Usa **OK** en la lista para sintonizar a pantalla completa. Durante la reproducc
 
 Consulta [`docs/TDT.md`](docs/TDT.md) para los resultados en la TCL y los permisos del fabricante, y [`docs/ROADMAP.md`](docs/ROADMAP.md) para las siguientes fases.
 
+LOVEStv se verificó en el reproductor de TCL. Los resultados por canal y el límite de HbbTV en Android 11 están en [la investigación de HbbTV](docs/HBBTV.md).
+
 ## Compilación
 
 Requiere **JDK 17**, **Android SDK 36** y **Build Tools 35.0.0**. Configura `JAVA_HOME` y `ANDROID_HOME`, o abre el proyecto en Android Studio. El wrapper descarga y verifica Gradle 8.13.
