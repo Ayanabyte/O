@@ -5,7 +5,7 @@
 
 Aplicación **Android TV** en **Kotlin**. Este repositorio comienza desde cero y no reutiliza código de aplicaciones anteriores.
 
-> **Estado:** base inicial `0.1.0-alpha01`. Aún no reproduce televisión, IPTV, radio ni vídeo. El siguiente trabajo consistirá en integrar las fuentes reales y probarlas en Android TV.
+> **Estado:** `0.2.0-alpha01`, primera integración del sintonizador TDT de Android TV.
 
 ## Identidad
 
@@ -14,11 +14,13 @@ Aplicación **Android TV** en **Kotlin**. Este repositorio comienza desde cero y
 - La intro se mantiene sin audio hasta aprobar una pista definitiva de sintonización analógica, **sin campanas ni música**.
 - Diseño centrado, con amplios márgenes y pensado para mando a distancia.
 
-## Primer objetivo
+## Televisión TDT
 
-La base incluye un opening nativo sin audio, un inicio con cinco secciones y navegación con el mando. Las secciones informan de su estado hasta que se integren las fuentes reales. Atrás omite el opening, vuelve a la tarjeta seleccionada desde una sección o sale de la aplicación desde el inicio.
+Entra en **Televisión** y concede a O! permiso para leer las listas de canales. La app usa los canales DVB-T y otros servicios terrestres digitales que el televisor expone a través de Android. Los servicios marcados como solo audio aparecen en **Radio TDT**.
 
-Consulta [`docs/ROADMAP.md`](docs/ROADMAP.md) para las fases de desarrollo y [`AGENTS.md`](AGENTS.md) para pautas de trabajo con Codex.
+Usa **OK** en la lista para sintonizar a pantalla completa. Durante la reproducción, **↓/↑** y **Canal +/−** cambian al canal siguiente o anterior. **Atrás** vuelve a la lista y libera la sesión del sintonizador.
+
+Consulta [`docs/TDT.md`](docs/TDT.md) para los resultados en la TCL y los permisos del fabricante, y [`docs/ROADMAP.md`](docs/ROADMAP.md) para las siguientes fases.
 
 ## Compilación
 
@@ -39,7 +41,7 @@ Con el ordenador y la TV en la misma red, activa la depuración en las opciones 
 ```powershell
 adb connect IP_DE_LA_TV:5555
 adb devices -l
-adb -s IP_DE_LA_TV:5555 install -r .\O-One-Entertainment-0.1.0-alpha01.apk
+adb -s IP_DE_LA_TV:5555 install -r .\O-One-Entertainment-0.2.0-alpha01.apk
 ```
 
 Si la TV muestra **Depuración inalámbrica** con código de vinculación, ejecuta `adb pair IP_DE_LA_TV:PUERTO_DE_VINCULACION` y luego `adb connect IP_DE_LA_TV:PUERTO_DE_DEPURACION`. Usa ese segundo puerto al indicar el dispositivo con `-s`. Abre **O! ONE ENTERTAINMENT** desde las aplicaciones del televisor después de ver `Success`.
@@ -53,7 +55,7 @@ Configura en GitHub Actions los secretos de la clave de distribución original:
 
 Conserva una copia segura del almacén y de su contraseña fuera del repositorio. El flujo verifica que el certificado coincide con el de la primera APK firmada antes de preparar un borrador.
 
-Cuando se apruebe una versión, etiqueta en `main` el commit verificado con `v` seguido de su `versionName`, por ejemplo `v0.1.0-alpha01`, y sube la etiqueta. GitHub Actions vuelve a compilar, firma la APK y crea un borrador en **Releases** con la APK y su SHA-256. Revisa el borrador y publícalo para habilitar la descarga pública.
+Cuando se apruebe una versión, etiqueta en `main` el commit verificado con `v` seguido de su `versionName`, por ejemplo `v0.2.0-alpha01`, y sube la etiqueta. GitHub Actions vuelve a compilar, firma la APK y crea un borrador en **Releases** con la APK y su SHA-256. Revisa el borrador y publícalo para habilitar la descarga pública.
 
 Para preparar localmente la misma APK firmada en Windows, carga `ONE_SIGNING_PASSWORD` en el entorno desde el gestor de secretos y usa el almacén original:
 
@@ -61,9 +63,9 @@ Para preparar localmente la misma APK firmada en Windows, carga `ONE_SIGNING_PAS
 .\gradlew.bat :app:assembleRelease
 $apksigner = "$env:ANDROID_HOME\build-tools\35.0.0\apksigner.bat"
 & $apksigner sign --ks 'RUTA_AL_ALMACEN.p12' --ks-type PKCS12 --ks-key-alias one-entertainment `
-  --ks-pass env:ONE_SIGNING_PASSWORD --out O-One-Entertainment-0.1.0-alpha01.apk `
+  --ks-pass env:ONE_SIGNING_PASSWORD --out O-One-Entertainment-0.2.0-alpha01.apk `
   app/build/outputs/apk/release/app-release-unsigned.apk
-& $apksigner verify --verbose --print-certs O-One-Entertainment-0.1.0-alpha01.apk
+& $apksigner verify --verbose --print-certs O-One-Entertainment-0.2.0-alpha01.apk
 Remove-Item Env:ONE_SIGNING_PASSWORD
 ```
 

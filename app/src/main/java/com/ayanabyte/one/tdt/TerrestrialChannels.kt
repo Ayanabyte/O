@@ -42,6 +42,10 @@ private val channelColumns = arrayOf(
     Channels.COLUMN_DISPLAY_NUMBER, Channels.COLUMN_DISPLAY_NAME, Channels.COLUMN_BROWSABLE
 )
 
+private const val TclTvInput = "com.tcl.tvinput"
+private const val TclRadio = "EN_TCL_RADIO"
+private const val TclAnalog = "EN_TCL_ATV"
+
 internal suspend fun readTerrestrialChannels(context: Context): ChannelCatalog =
     withContext(Dispatchers.IO) {
         try {
@@ -54,18 +58,22 @@ internal suspend fun readTerrestrialChannels(context: Context): ChannelCatalog =
             // TYPE_TUNER also includes software inputs. The broadcast type identifies TDT rows.
             val channels = buildList {
                 for (input in inputs) {
+                    val isTcl = input.serviceInfo.packageName == TclTvInput
                     val uri = TvContract.buildChannelsUriForInput(input.id)
                     val rows = context.contentResolver.query(uri, channelColumns, null, null, null)
                         ?: return@withContext ChannelCatalog.Unavailable
                     rows.use { cursor ->
                         while (cursor.moveToNext()) {
                             if (cursor.getString(1) !in terrestrialTypes || cursor.getInt(5) != 1) continue
+                            val service = cursor.getString(2)
+                            // This TCL provider labels analog rows as DVB-T and uses its own service types.
+                            if (service == Channels.SERVICE_TYPE_OTHER || (isTcl && service == TclAnalog)) continue
                             add(TerrestrialChannel(
                                 id = cursor.getLong(0),
                                 inputId = input.id,
                                 number = cursor.getString(3)?.takeIf(String::isNotBlank),
                                 name = cursor.getString(4)?.takeIf(String::isNotBlank),
-                                radio = cursor.getString(2) == Channels.SERVICE_TYPE_AUDIO
+                                radio = service == Channels.SERVICE_TYPE_AUDIO || (isTcl && service == TclRadio)
                             ))
                         }
                     }

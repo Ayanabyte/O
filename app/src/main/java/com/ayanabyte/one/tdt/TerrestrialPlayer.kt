@@ -121,15 +121,19 @@ private fun TunerView(channel: TerrestrialChannel, onReception: (Reception) -> U
     AndroidView(factory = { tvView }, modifier = Modifier.fillMaxSize())
     LifecycleResumeEffect(tvView) {
         var active = true
+        var audioSelected = false
+        var contentBlocked = false
         fun report(inputId: String, reception: Reception) {
-            if (active && inputId == channel.inputId) onReception(reception)
+            if (active && inputId == channel.inputId && (!contentBlocked || reception == Reception.Blocked)) {
+                onReception(reception)
+            }
         }
 
         onReception(Reception.Tuning)
         tvView.setCallback(object : TvView.TvInputCallback() {
             override fun onVideoAvailable(inputId: String) {
                 Log.i(TdtLog, "Video available for ${channel.id} (${channel.number} ${channel.name})")
-                report(inputId, Reception.Video)
+                if (!channel.radio) report(inputId, Reception.Video)
             }
 
             override fun onVideoUnavailable(inputId: String, reason: Int) {
@@ -141,14 +145,23 @@ private fun TunerView(channel: TerrestrialChannel, onReception: (Reception) -> U
                     TvInputManager.VIDEO_UNAVAILABLE_REASON_NOT_CONNECTED -> Reception.Disconnected
                     TvInputManager.VIDEO_UNAVAILABLE_REASON_INSUFFICIENT_RESOURCE -> Reception.Busy
                     TvInputManager.VIDEO_UNAVAILABLE_REASON_AUDIO_ONLY -> Reception.Radio
+                    TvInputManager.VIDEO_UNAVAILABLE_REASON_UNKNOWN -> when {
+                        channel.radio && audioSelected -> Reception.Radio
+                        channel.radio -> Reception.Tuning
+                        else -> Reception.Failed
+                    }
                     else -> Reception.Failed
                 }
                 report(inputId, reception)
             }
 
             override fun onTrackSelected(inputId: String, type: Int, trackId: String?) {
-                if (active && inputId == channel.inputId && type == TvTrackInfo.TYPE_AUDIO && trackId != null) {
-                    Log.i(TdtLog, "Audio track selected for ${channel.id}")
+                if (active && inputId == channel.inputId && type == TvTrackInfo.TYPE_AUDIO) {
+                    audioSelected = trackId != null
+                    if (audioSelected) {
+                        Log.i(TdtLog, "Audio track selected for ${channel.id}")
+                        if (channel.radio) report(inputId, Reception.Radio)
+                    }
                 }
             }
 
@@ -157,10 +170,22 @@ private fun TunerView(channel: TerrestrialChannel, onReception: (Reception) -> U
                 report(inputId, Reception.Failed)
             }
 
-            override fun onDisconnected(inputId: String) = report(inputId, Reception.Disconnected)
+            override fun onDisconnected(inputId: String) {
+                contentBlocked = false
+                report(inputId, Reception.Disconnected)
+            }
 
-            override fun onContentBlocked(inputId: String, rating: TvContentRating) =
+            override fun onContentBlocked(inputId: String, rating: TvContentRating) {
+                if (!active || inputId != channel.inputId) return
+                contentBlocked = true
                 report(inputId, Reception.Blocked)
+            }
+
+            override fun onContentAllowed(inputId: String) {
+                if (!active || inputId != channel.inputId || !contentBlocked) return
+                contentBlocked = false
+                report(inputId, if (channel.radio && audioSelected) Reception.Radio else Reception.Tuning)
+            }
         })
 
         val manager = context.getSystemService(TvInputManager::class.java)

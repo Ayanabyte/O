@@ -41,12 +41,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -161,35 +164,54 @@ private fun ChannelList(
     lastChannelId: Long?,
     onSelect: (TerrestrialChannel) -> Unit
 ) {
-    val restoreIndex = channels.indexOfFirst { it.id == lastChannelId }.coerceAtLeast(0)
+    val radioCount = channels.count { it.radio }
+    val hasBothGroups = radioCount in 1 until channels.size
+    var showRadio by remember { mutableStateOf(channels.firstOrNull { it.id == lastChannelId }?.radio ?: (radioCount == channels.size)) }
+    val visibleChannels = remember(channels, showRadio) { channels.filter { it.radio == showRadio } }
+    val restoreIndex = visibleChannels.indexOfFirst { it.id == lastChannelId }.coerceAtLeast(0)
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = restoreIndex)
     val restoreFocus = remember { FocusRequester() }
+    val televisionFocus = remember { FocusRequester() }
+    val radioFocus = remember { FocusRequester() }
 
     Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 54.dp, vertical = 28.dp)) {
         Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.tdt_title), Modifier.weight(1f), color = Color.White, fontSize = 30.sp,
                 fontWeight = FontWeight.SemiBold)
-            val radioCount = channels.count { it.radio }
             Text(stringResource(R.string.tdt_count, channels.size - radioCount, radioCount), color = Grey, fontSize = 16.sp)
         }
+        if (hasBothGroups) {
+            Row(Modifier.padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ChannelGroup(R.string.tdt_television, !showRadio, televisionFocus) { showRadio = false }
+                ChannelGroup(R.string.tdt_radio, showRadio, radioFocus) { showRadio = true }
+            }
+        }
         LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            itemsIndexed(channels, key = { _, channel -> channel.id }) { index, channel ->
-                if (index == 0 || channels[index - 1].radio != channel.radio) {
-                    Text(
-                        stringResource(if (channel.radio) R.string.tdt_radio else R.string.tdt_television),
-                        Modifier.padding(top = 8.dp, bottom = 8.dp), color = Grey, fontSize = 17.sp
-                    )
+            itemsIndexed(visibleChannels, key = { _, channel -> channel.id }) { index, channel ->
+                var row = if (index == restoreIndex) Modifier.focusRequester(restoreFocus) else Modifier
+                if (index == 0 && hasBothGroups) {
+                    row = row.focusProperties { up = if (showRadio) radioFocus else televisionFocus }
                 }
-                val row = if (index == restoreIndex) Modifier.focusRequester(restoreFocus) else Modifier
                 ChannelRow(channel, row) { onSelect(channel) }
             }
         }
     }
-    LaunchedEffect(restoreIndex) {
+    LaunchedEffect(showRadio, restoreIndex) {
         listState.scrollToItem(restoreIndex)
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.index == restoreIndex } }.first { it }
+        val key = visibleChannels[restoreIndex].id
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.any { it.key == key } }.first { it }
         restoreFocus.requestFocus()
     }
+}
+
+@Composable
+private fun ChannelGroup(label: Int, active: Boolean, focus: FocusRequester, onChoose: () -> Unit) {
+    FocusButton(
+        stringResource(label),
+        Modifier.focusRequester(focus).semantics { selected = active }
+            .border(2.dp, if (active) Sky else Color.Transparent, RoundedCornerShape(12.dp)),
+        onChoose
+    )
 }
 
 @Composable
