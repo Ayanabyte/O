@@ -61,3 +61,9 @@ reales `enabled`, `video`, `jar`, `overlay`, `surface`, `bound`,
 identificador de entrada TCL. Una captura al sintonizar Antena 3 ayuda a
 localizar el bloqueo sin depender de una terminal ADB. El indicador no
 reemplaza la validación real del aviso LOVEStv, que lo genera la emisora.
+
+### Instalación del diagnóstico detallado
+La compilación de diagnóstico usa temporalmente el identificador
+`com.ayanabyte.one.hbbtvdiag` para coexistir con la prueba previa
+`com.ayanabyte.one.hbbtvtest` y con O! estable. Esto evita conflictos
+entre certificados debug generados por distintos runners de GitHub Actions.
