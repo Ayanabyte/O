@@ -109,3 +109,16 @@ En DIAG 5, `Tbrowser.initTbrowser` se invocó, pero no notificó el resultado an
 ## Resultado del intento DIAG 7
 
 El usuario confirma que DIAG 7 se cierra aproximadamente 3 segundos después de sintonizar un canal. DIAG 7 omitía el puente experimental de CA (`NativeSection.prepareCertificates`), a diferencia de DIAG 6. La causa del cierre aún NO está identificada: puede ser una excepción Java, un fallo nativo o terminación del proceso. No repetir este cambio ni desactivar rutinas nativas hasta examinar el registro de fallos `logcat -b crash` y los eventos de `AndroidRuntime` / `ActivityManager`. Por seguridad se restaura la implementación DIAG 6 en la rama, que al menos no mostraba ese cierre inmediato. O! estable continúa sin cambios.
+
+## Confirmación por Bugjaeger del cierre DIAG 7 (18/11/2026)
+
+Log del dispositivo TCL G07 / Android 11, reproducido tres veces a las **00:39:40, 00:40:14 y 00:40:52** (hora de Madrid):
+
+- **Proceso:** `com.tcl.tv`, nombre del proceso compartido *por configuración* de la APK experimental; esto **no demuestra** que se haya caído el paquete oficial del fabricante.
+- **Hilo:** `hbbtv_api`, ABI arm (32 bits).
+- **Error:** `SIGSEGV (SEGV_MAPERR)` al acceder a `0x0` (puntero nulo).
+- **Pila:** `libc.so!__memcpy_a7` → `/product/lib/libsitatv.so!tos_system_decrypt_cert+424` → `/product/lib/libhbbtv-server.so!api_task_entry+932`.
+- **Correlación:** DIAG 7 omitió `NativeSection.prepareCertificates` antes de iniciar el motor HbbTV, y las tres ejecuciones de esa variante se cerraron; el código DIAG 6 se ha restaurado. La causalidad es plausible pero no demostrada por un análisis de memoria.
+- **No confundir:** `KoinApplication has not been started` (17/11 21:48, `tv.own.owntv.MainActivity`) y `motionclient` no son estos cierres.
+
+**No publicar ni volver a ejecutar DIAG 7. No omitir ni eludir las rutinas de certificados, ni modificar claves/almacenes del firmware para sortear los fallos.** La siguiente investigación debe centrarse en por qué `NativeSection.installCertificates` devolvía `-1` en DIAG 6 y por qué `Tbrowser.initTbrowser` no producía callback en DIAG 5. Para ello se requieren logs previos al fallo, o análisis estático de fuentes y bibliotecas autorizadas. Evitar nuevos intentos nativos que puedan desestabilizar la TV sin diagnóstico previo.
