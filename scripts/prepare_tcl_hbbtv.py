@@ -149,7 +149,7 @@ service_source = service_source.replace(old_reply, """
                 String report=Report.read(windowContext!=null?windowContext:this);
                 if(report!=null && !report.trim().isEmpty()) {
                     String last=report.trim();
-                    int split=last.lastIndexOf('\n');
+                    int split=last.lastIndexOf('\\n');
                     if(split>=0) last=last.substring(split+1);
                     detail+=" | "+last;
                 }
