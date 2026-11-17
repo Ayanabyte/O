@@ -122,3 +122,50 @@ Log del dispositivo TCL G07 / Android 11, reproducido tres veces a las **00:39:4
 - **No confundir:** `KoinApplication has not been started` (17/11 21:48, `tv.own.owntv.MainActivity`) y `motionclient` no son estos cierres.
 
 **No publicar ni volver a ejecutar DIAG 7. No omitir ni eludir las rutinas de certificados, ni modificar claves/almacenes del firmware para sortear los fallos.** La siguiente investigación debe centrarse en por qué `NativeSection.installCertificates` devolvía `-1` en DIAG 6 y por qué `Tbrowser.initTbrowser` no producía callback en DIAG 5. Para ello se requieren logs previos al fallo, o análisis estático de fuentes y bibliotecas autorizadas. Evitar nuevos intentos nativos que puedan desestabilizar la TV sin diagnóstico previo.
+
+
+## Forensic audit — native certificate bridge and browser startup (2026-11-18)
+
+Source: Channelplus v5.3.14 historical overlay (SHA256
+fea649552eb21f7a5df958a20dbb1cf6915b186b701a346aca498be434b8173b).
+The inspected libsectionprobe.so SHA256 is
+399d2ad33c4cb4ffa4e29c6b083f2e7f0af6313273761dafaa0bf73bfdad6cc6.
+
+Verified static findings:
+- NativeSection.prepareCertificates validates the vendor libraries, reads
+  /proc/self/maps and invokes JNI NativeSection.installCertificates. This is
+  an in-process native provider hook, not merely Android system CA trust.
+- The ARM function at virtual address 0x1918 checks the local global
+  'provider' at virtual address 0x4000. If this is nonzero, execution branches
+  to return -1. Other precondition failures also return -1.
+  Therefore DIAG 6's -1 may be caused by repeat initialization, but this
+  cause is NOT yet proved for that particular attempt.
+- The original HbbTvRuntimeService can attempt initialization after channel
+  or session changes; cleanup does not necessarily end the Android process.
+  Without a guard, repeated native installation is a genuine risk.
+- In DIAG 7, removal of NativeSection.prepareCertificates correlated with
+  three SIGSEGV crashes in libsitatv.so!tos_system_decrypt_cert called by
+  libhbbtv-server.so!api_task_entry (user's 00:39/00:40 crash log).
+  Never omit/bypass native CA initialization again.
+- In DIAG 5, Tbrowser.initTbrowser was called but no callback arrived.
+  No inspected evidence yet establishes WHY: activity/window context,
+  vendor state or another native prerequisite could be involved.
+  Do not assume that a timeout is equivalent to permission denial.
+
+Fix in experimental branch ONLY:
+- prepareNativeCertificatesOnce(Context) stores successful installation state
+  for the lifetime of the process and reuses it.
+- If installation failed, it refuses another native memory patch attempt in
+  the same process.
+- This does not disable TLS validation, modify vendor files or guarantee
+  that Tbrowser will complete initialization.
+- No install or run on TCL is authorized by CI success. Do not merge into
+  stable until actual device validation.
+
+Existing evidence can be read from Bugjaeger WITHOUT launching HbbTV:
+run-as com.ayanabyte.one.hbbtvdiag6 cat files/lovestv-report.txt
+run-as com.ayanabyte.one.hbbtvdiag5 cat files/lovestv-report.txt
+logcat -d -v time -t 1200 -s ChannelplusHbb:V ChannelplusLoveProbe:V '*:S'
+
+The stored report is written by Report.add in the historical runtime JAR.
+It may be absent; that does not prove anything about TCL authorization.

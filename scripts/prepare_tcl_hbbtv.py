@@ -183,6 +183,41 @@ service_source=service_source.replace(attach_line,
                 +" windowToken="+(root.getWindowToken()!=null)
                 +" size="+root.getWidth()+"x"+root.getHeight());''')
 
+# The TCL JNI installer rejects a second installation within one process.
+# Reuse successful state. Never retry a failed/partial memory patch until
+# the process has restarted; doing so risks a native crash.
+old_cert_call = 'NativeSection.prepareCertificates(windowContext); NativeUA.prepare(windowContext);'
+if service_source.count(old_cert_call) != 1:
+    raise RuntimeError("Historical CA preparation call changed")
+service_source = service_source.replace(
+    old_cert_call, 'prepareNativeCertificatesOnce(windowContext); NativeUA.prepare(windowContext);')
+init_marker = '    private void initialize() {'
+if service_source.count(init_marker)!=1:
+    raise RuntimeError("Historical HbbTV lifecycle changed")
+ca_guard = """    private static boolean oneCaAttempted;
+    private static boolean oneCaReady;
+    private static synchronized void prepareNativeCertificatesOnce(Context context) throws Exception {
+        if(oneCaReady) {
+            Log.i(TAG,"Reusing previously successful TCL CA bridge in the same process");
+            return;
+        }
+        if(oneCaAttempted) {
+            throw new IllegalStateException("A previous TCL native CA preparation failed; not retrying an unsafe memory patch");
+        }
+        oneCaAttempted=true;
+        try {
+            NativeSection.prepareCertificates(context);
+            oneCaReady=true;
+            Log.i(TAG,"TCL CA bridge installed once; subsequent sessions may reuse it");
+        } catch(Exception | LinkageError error) {
+            Log.e(TAG,"TCL CA bridge failed; retries disabled for this process",error);
+            throw error;
+        }
+    }
+"""
+service_source=service_source.replace(init_marker,ca_guard+init_marker)
+assert service_source.count("prepareNativeCertificatesOnce(windowContext);")==1
+
 # Track the *real* runtime stages across Messenger IPC.
 def replace_runtime_one(before, after, label):
     global service_source
