@@ -111,7 +111,7 @@ shutil.copyfile(SRC / "libs/lovestv-runtime.jar", jar)
 # before invoking the manufacturer's real authorization. Adapt only this
 # guard in our own legacy client; TCL's systemAuthorized remains unchanged.
 old_id = b"tv.own.owntv.tdt2"
-new_id = b"com.ayanabyte.one.hbbtvdiag3"
+new_id = b"com.ayanabyte.one.hbbtvdiag4"
 class_path = "tv/own/channelplus/lovestvprobe/ExperimentalAuthorization.class"
 guard = len(old_id).to_bytes(2, "big") + old_id
 replacement = len(new_id).to_bytes(2, "big") + new_id

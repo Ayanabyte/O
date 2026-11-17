@@ -91,3 +91,8 @@ heredado de Channel+** para \`com.ayanabyte.one.hbbtvdiag3\`. La comprobación
 real del fabricante \`systemAuthorized\` continúa intacta; su aprobación y el
 funcionamiento de LOVEStv no están garantizados. El diagnóstico mostrará la
 última etapa de error sin revelar valores de autorización.
+
+
+## DIAG 4 — permisos de conectividad TCL
+
+DIAG 3 mostró una excepción remota de ConnectivityService.getAllNetworks() en enforceAccessPermission(). La variante tclHbbtv declara ahora ACCESS_NETWORK_STATE e INTERNET (permisos normales); muestra netStatePermission e internetPermission. La variante standard no recibe nuevos permisos. DIAG 4 utiliza com.ayanabyte.one.hbbtvdiag4 para instalarse separadamente.
