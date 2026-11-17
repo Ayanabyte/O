@@ -78,7 +78,7 @@ replace("private void visibility() { if(root!=null) root.setAlpha(running && rea
         "private void visibility() { if(root!=null) { boolean show=ready && !hidden && (initializing || running); root.setAlpha(show ? 1f : 0f); if(show) root.bringToFront(); } }",
         "transparent root visibility")
 replace("            visibility(); reply(STARTED,new Bundle()); inspect.run();",
-        "            visibility(); Log.i(TAG,\"Native Tbrowser started within O! Activity\"); reply(STARTED,new Bundle()); inspect.run();",
+        "            visibility(); Log.i(TAG,\"Native HbbTV autostart completed without pressing any key; awaiting broadcaster LOVEStv side hints\"); reply(STARTED,new Bundle()); inspect.run();",
         "startup report")
 
 # Recreate the documented 5.3.12/13/14 integration, in the original order.
