@@ -122,7 +122,7 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
         if (BuildConfig.FLAVOR == "tclHbbtv" && !channel.radio) {
             Column(Modifier.align(Alignment.TopEnd).padding(20.dp)
                 .background(Color(0xDD000000)).padding(12.dp)) {
-                Text("O! DIAG 4 · PERMISOS DE RED TCL", color = Color(0xFF4DDCF5), fontSize = 15.sp)
+                Text("O! DIAG 5 · ETAPA HBBTV", color = Color(0xFF4DDCF5), fontSize = 15.sp)
                 Text(hbbtvStatus, color = Color.White, fontSize = 13.sp)
             }
         }

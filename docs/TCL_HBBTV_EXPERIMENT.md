@@ -96,3 +96,8 @@ funcionamiento de LOVEStv no están garantizados. El diagnóstico mostrará la
 ## DIAG 4 — permisos de conectividad TCL
 
 DIAG 3 mostró una excepción remota de ConnectivityService.getAllNetworks() en enforceAccessPermission(). La variante tclHbbtv declara ahora ACCESS_NETWORK_STATE e INTERNET (permisos normales); muestra netStatePermission e internetPermission. La variante standard no recibe nuevos permisos. DIAG 4 utiliza com.ayanabyte.one.hbbtvdiag4 para instalarse separadamente.
+
+
+## DIAG 5 — etapas del arranque HbbTV
+
+Esta variante registra y presenta la última etapa emitida por el servicio en `lastStage`: registro de autorización, preparación del navegador del fabricante, inicialización de `HbbtvServer`, llamada a `Tbrowser.initTbrowser`, respuesta del navegador y `HbbtvServer.start`. Así se puede diferenciar un arranque todavía pendiente de un bloqueo. Conserva los permisos de DIAG 4, el reproductor TDT y el error detallado. Nombre: O! LOVEStv DIAG 5. Paquete separado `com.ayanabyte.one.hbbtvdiag5`.

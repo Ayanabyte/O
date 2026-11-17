@@ -111,7 +111,7 @@ shutil.copyfile(SRC / "libs/lovestv-runtime.jar", jar)
 # before invoking the manufacturer's real authorization. Adapt only this
 # guard in our own legacy client; TCL's systemAuthorized remains unchanged.
 old_id = b"tv.own.owntv.tdt2"
-new_id = b"com.ayanabyte.one.hbbtvdiag4"
+new_id = b"com.ayanabyte.one.hbbtvdiag5"
 class_path = "tv/own/channelplus/lovestvprobe/ExperimentalAuthorization.class"
 guard = len(old_id).to_bytes(2, "big") + old_id
 replacement = len(new_id).to_bytes(2, "big") + new_id
@@ -165,6 +165,64 @@ service_source = service_source.replace(old_reply, """
         if(detail.length()>450) detail=detail.substring(0,450);
         Bundle info=new Bundle(); info.putString("oneFailure",detail);
         reply(FAILED,info); cleanup();""")
+# Track the *real* runtime stages across Messenger IPC.
+def replace_runtime_one(before, after, label):
+    global service_source
+    if service_source.count(before) != 1:
+        raise RuntimeError("Cannot insert HbbTV stage: " + label)
+    service_source = service_source.replace(before, after)
+
+replace_runtime_one(
+    "    private void initialize() {",
+    """    private void oneStage(String text) {
+        Log.i(TAG, "O! TCL stage: " + text);
+        Bundle data=new Bundle(); data.putString("oneStage",text);
+        reply(96,data);
+    }
+    private void initialize() {""",
+    "stage sender"
+)
+replace_runtime_one(
+    'Log.i(TAG,"Autostart: registering the 1.45 native runtime (no colour key)");',
+    'Log.i(TAG,"Autostart: registering the 1.45 native runtime (no colour key)"); oneStage("1: registration requested");',
+    "registration requested"
+)
+replace_runtime_one(
+    'if(!authorized) { fail("Existing 1.45 runtime registration failed",null); return; }',
+    'if(!authorized) { fail("Existing 1.45 runtime registration failed",null); return; } oneStage("2: registration passed");',
+    "registration approved"
+)
+replace_runtime_one(
+    'VendorBrowserAccess.prepare(windowContext);',
+    'VendorBrowserAccess.prepare(windowContext); oneStage("3: vendor browser access prepared");',
+    "vendor preparation"
+)
+replace_runtime_one(
+    'Object initialized=call(engine,"init");',
+    'oneStage("4: HbbtvServer.init requested"); Object initialized=call(engine,"init");',
+    "engine init"
+)
+replace_runtime_one(
+    'if(ok) browserReady(); else fail("Tbrowser onSuccess=false",null);',
+    'if(ok) { oneStage("7: Tbrowser callback succeeded"); browserReady(); } else fail("Tbrowser onSuccess=false",null);',
+    "browser callback"
+)
+replace_runtime_one(
+    '.invoke(browser,windowContext,root,false);',
+    '.invoke(browser,windowContext,root,false); oneStage("6: Tbrowser.init invoked; waiting for callback");',
+    "browser initialization"
+)
+replace_runtime_one(
+    'Object result=call(engine,"start");',
+    'oneStage("8: HbbtvServer.start requested"); Object result=call(engine,"start");',
+    "engine start"
+)
+replace_runtime_one(
+    'visibility(); reply(STARTED,new Bundle()); inspect.run();',
+    'visibility(); oneStage("9: engine started; awaiting broadcaster application"); reply(STARTED,new Bundle()); inspect.run();',
+    "startup complete"
+)
+
 service.write_text(service_source,encoding="utf-8")
 # CRITICAL: copy_source already copied this file to O!.
 # Copy the modified runtime AGAIN, so O! actually sends oneFailure
@@ -203,6 +261,22 @@ needle = 'private void fail(String reason,Throwable error) {'
 assert source.count(needle) == 1
 source = source.replace(needle, needle + ' oneLastFailure=reason;')
 view.write_text(source, encoding="utf-8")
+
+# Listen for separate, non-terminal initialization messages from TCL runtime.
+host = view.read_text(encoding="utf-8")
+if host.count('private String oneLastFailure = "none";') != 1:
+    raise RuntimeError("DIAG 5 requires existing on-screen diagnostic")
+host = host.replace('private String oneLastFailure = "none";',
+    'private String oneLastFailure = "none", oneStage = "waiting for runtime stage";')
+if host.count('case FAILED: fail(data.getString("oneFailure","TCL HbbTV failed without details"),null); break;') != 1:
+    raise RuntimeError("Host message switch changed")
+host = host.replace('case FAILED: fail(data.getString("oneFailure","TCL HbbTV failed without details"),null); break;',
+    'case FAILED: fail(data.getString("oneFailure","TCL HbbTV failed without details"),null); break;\n            case 96: oneStage=data.getString("oneStage","runtime event"); break;')
+needle = ' + " failed=" + failed + " error=" + oneLastFailure;'
+if host.count(needle) != 1:
+    raise RuntimeError("Host diagnostics anchor changed")
+host = host.replace(needle, ' + " failed=" + failed + " error=" + oneLastFailure\n            + "\\nlastStage=" + oneStage;')
+view.write_text(host,encoding="utf-8")
 
 assert "oneFailure" in runtime.read_text(), "Error details were not packaged into O!"
 assert "activityParent.addView(root" in runtime.read_text()
