@@ -218,8 +218,8 @@ replace_runtime_one(
     "engine start"
 )
 replace_runtime_one(
-    'visibility(); reply(STARTED,new Bundle()); inspect.run();',
-    'visibility(); oneStage("9: engine started; awaiting broadcaster application"); reply(STARTED,new Bundle()); inspect.run();',
+    'reply(STARTED,new Bundle()); inspect.run();',
+    'oneStage("9: engine started; awaiting broadcaster application"); reply(STARTED,new Bundle()); inspect.run();',
     "startup complete"
 )
 
