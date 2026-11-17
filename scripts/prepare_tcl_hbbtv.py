@@ -107,6 +107,30 @@ for name in ("libsectionprobe.so", "libuaprofile.so"):
 jar = ROOT / "app/libs/lovestv-runtime.jar"
 jar.parent.mkdir(parents=True, exist_ok=True)
 shutil.copyfile(SRC / "libs/lovestv-runtime.jar", jar)
+# The historical JAR was compiled for Channel+'s old appId. It rejects O!
+# before invoking the manufacturer's real authorization. Adapt only this
+# guard in our own legacy client; TCL's systemAuthorized remains unchanged.
+old_id = b"tv.own.owntv.tdt2"
+new_id = b"com.ayanabyte.one.hbbtvdiag3"
+class_path = "tv/own/channelplus/lovestvprobe/ExperimentalAuthorization.class"
+guard = len(old_id).to_bytes(2, "big") + old_id
+replacement = len(new_id).to_bytes(2, "big") + new_id
+patched = jar.with_suffix(".patched.jar")
+with zipfile.ZipFile(jar) as zin, zipfile.ZipFile(patched, "w") as zout:
+    seen_guard = False
+    for entry in zin.infolist():
+        data = zin.read(entry.filename)
+        if entry.filename == class_path:
+            assert data.count(guard) == 1, "Historical package guard changed"
+            data = data.replace(guard, replacement)
+            seen_guard = True
+        zout.writestr(entry, data)
+assert seen_guard, "Historical registration class missing from JAR"
+patched.replace(jar)
+with zipfile.ZipFile(jar) as check:
+    patched_class = check.read(class_path)
+    assert patched_class.count(new_id) == 1 and old_id not in patched_class
+print("Adapted historical app-id check, without bypassing OEM authorization")
 asset = target / "assets/lovestv_playback_145.js"
 asset.parent.mkdir(parents=True, exist_ok=True)
 shutil.copyfile(SRC / "src/hbbtv32/assets/lovestv_playback_145.js", asset)
@@ -120,6 +144,17 @@ assert service_source.count(old_reply) == 1, "Unexpected runtime failure handler
 service_source = service_source.replace(old_reply, """
         Log.e(TAG,reason,error);
         String detail=reason;
+        if(reason.contains("registration failed")) {
+            try {
+                String report=Report.read(windowContext!=null?windowContext:this);
+                if(report!=null && !report.trim().isEmpty()) {
+                    String last=report.trim();
+                    int split=last.lastIndexOf('\n');
+                    if(split>=0) last=last.substring(split+1);
+                    detail+=" | "+last;
+                }
+            } catch(Exception ignored) { }
+        }
         if(error!=null) {
             Throwable cause=error;
             for(int depth=0; depth<8 && cause.getCause()!=null && cause.getCause()!=cause; depth++) {

@@ -81,3 +81,13 @@ DIAG 2 seguía mostrando `TCL HbbTV failed without details` porque el
 script copiaba el Java original a O! antes de inyectar el detalle. DIAG 3
 vuelve a copiarlo tras la modificación y comprueba el archivo empaquetado.
 APK separada `com.ayanabyte.one.hbbtvdiag3` y cabecera `O! DIAG 3`.
+
+## Restricción de identidad de la biblioteca heredada
+
+En \`ExperimentalAuthorization.class\` se encontró una comprobación literal
+\`tv.own.owntv.tdt2\` que bloqueaba cualquier paquete nuevo antes de intentar
+el registro HbbTV. DIAG 3 adapta **solo esa condición interna del código
+heredado de Channel+** para \`com.ayanabyte.one.hbbtvdiag3\`. La comprobación
+real del fabricante \`systemAuthorized\` continúa intacta; su aprobación y el
+funcionamiento de LOVEStv no están garantizados. El diagnóstico mostrará la
+última etapa de error sin revelar valores de autorización.
