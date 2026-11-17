@@ -51,3 +51,32 @@ La misma APK abrió Antena 3 mediante el `ACTION_VIEW` exportado de `com.tcl.tv`
 - Usar LOVEStv en la aplicación TV de TCL. El flujo verificado permite abrir el canal desde otra aplicación con `ACTION_VIEW` y pulsar Azul cuando TCL está en primer plano. Es una derivación al reproductor nativo.
 - En un televisor de pruebas sin tecla Azul, `adb shell input keyevent KEYCODE_PROG_BLUE` permite enviarla con la TV de TCL en primer plano. Una APK ordinaria carece de `android.permission.INJECT_EVENTS`, que el firmware declara `signature`, para enviar esa tecla a la ventana de otra aplicación. [Código de Android sobre inyección de eventos](https://android.googlesource.com/platform/frameworks/base/+/c7efcde0a81e74f63cff2072992cd500fe1fcf60/services/core/java/com/android/server/input/InputManagerService.java)
 - Para integrarlo en el reproductor de O!, hace falta una interfaz de TCL admitida para terceros o un dispositivo que exponga `TvInteractiveAppService` junto con un proveedor compatible con HbbTV.
+
+## Acceso externo provisional desde O! (`0.3.0-alpha01`)
+
+Esta versión **no integra HbbTV en el reproductor de O!**. En la TCL probada, los controles del reproductor ofrecen **LOVEStv en TCL** únicamente para `La 1 UHD`, `La 2 HD`, `A3 UHD`, `Antena 3` y `Telecinco`, todos servicios TDT del `com.tcl.tvinput`. Radio y los demás canales no muestran el acceso. La lista se basa en nombres reales ya probados; un cambio de nombre del proveedor puede ocultarlo hasta revisar de nuevo el canal.
+
+La secuencia por mando es **OK** para mostrar controles, **→** para enfocar el botón y **OK** para abrir TCL TV. O! verifica que `com.tcl.tv` resuelva el Intent antes de liberar la reproducción. Después envía un `Intent.ACTION_VIEW` con `TvContract.buildChannelUri(id)`, MIME `vnd.android.cursor.item/channel` y paquete `com.tcl.tv`. Resetea el `TvView` antes del cambio para soltar la sesión del sintonizador. Si no se encuentra o no puede abrirse la actividad, conserva el reproductor o vuelve a sintonizar el canal y muestra un mensaje. La consulta del paquete está declarada en `<queries>` para Android 11.
+
+En TCL TV el botón Azul sigue perteneciendo a la aplicación del fabricante. O! no envía teclas a otras aplicaciones. Para regresar, el usuario vuelve a abrir O! desde Google TV. El retorno no es automático. Al reanudarse, el `TvView` de O! crea una sesión nueva para el canal guardado.
+
+### Pruebas en esta actualización
+
+La compilación instalada conserva `applicationId` `com.ayanabyte.one`, el certificado anterior y el permiso `READ_TV_LISTINGS`. La TCL identificó la APK instalada con la misma suma SHA-256 que el artefacto local. Las filas compatibles observadas fueron:
+
+| Canal en O! | ID TvContract | Resultado en TCL TV | Azul en TCL |
+| --- | ---: | --- | --- |
+| A3 UHD | `10032309` | Abrió `TVActivity` en A3 UHD y liberó la sesión de O!. | El log de TCL cargó `lovestv3-4.0.1` desde Atresmedia. |
+| La 2 HD | `10032332` | Abrió el canal elegido. | El log cargó `lovestv3-4.0.1` desde el lanzador RTVE. |
+| Telecinco | `10032347` | Abrió Telecinco. | El log cargó `lovestv3-4.0.1` desde el lanzador Mediaset. |
+| La 1 UHD | `10032331` | Abrió el canal elegido. | La primera pulsación mostró el lanzador rojo RTVE; otra pulsación Azul abrió `lovestv3-4.0.1`. |
+
+Los resultados corresponden a las páginas y rutas que el navegador HbbTV TCL registró en `logcat`; las funciones internas disponibles pueden variar por canal y señalización. No se verificó el inicio desde el principio ni la reproducción de vídeo bajo demanda en esta tarea.
+
+- El foco del botón **LOVEStv en TCL** apareció en la jerarquía de la interfaz para A3 UHD. En 24h HD, un canal fuera de la lista comprobada, el botón no apareció. En Radio TDT tampoco apareció.
+- Tras cada traspaso se abrió O! manualmente desde el lanzador. `TvView` volvió a sintonizar y se registraron las pistas de audio y disponibilidad de vídeo. Se repitió el flujo en varios canales sin reiniciar el proceso de O!.
+- La radio 95.2 Terrassa volvió a seleccionar una pista de audio. Atrás hasta Inicio generó `Session reset` y `dumpsys tv_input` dejó de mostrar una sesión de reproducción de O!.
+- Un cambio rápido de canal en una compilación intermedia expuso un intento de adjuntar un `TvView` que aún tenía padre. Se corrigió manteniendo la misma vista Android y reiniciando su efecto TIF por canal. La build final cambió de canal sin repetir ese cierre.
+- La captura de pantalla del vídeo TIF no está disponible por la composición SIDEBAND de esta TCL. Se verificaron callbacks de vídeo, selección de audio y carga de páginas de LOVEStv en `logcat`; no se declara una inspección de imagen mediante captura.
+
+La integración sigue dependiendo de que el paquete nativo TCL permanezca instalado y resuelva la URI de `TvContract`. Este acceso es una derivación externa al servicio oficial de TCL, no una barra HbbTV propia de O!.
