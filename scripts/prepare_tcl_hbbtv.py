@@ -111,6 +111,27 @@ asset = target / "assets/lovestv_playback_145.js"
 asset.parent.mkdir(parents=True, exist_ok=True)
 shutil.copyfile(SRC / "src/hbbtv32/assets/lovestv_playback_145.js", asset)
 
+# Preserve the vendor failure in the IPC reply rather than dropping it.
+# The original implementation sent an empty Bundle and hid the actual cause.
+service = SRC / "src/main/java/tv/own/channelplus/lovestvprobe/HbbTvRuntimeService.java"
+service_source = service.read_text(encoding="utf-8")
+old_reply = 'Log.e(TAG,reason,error); reply(FAILED,new Bundle()); cleanup();'
+assert service_source.count(old_reply) == 1, "Unexpected runtime failure handler"
+service_source = service_source.replace(old_reply, """
+        Log.e(TAG,reason,error);
+        String detail=reason;
+        if(error!=null) {
+            Throwable cause=error;
+            for(int depth=0; depth<8 && cause.getCause()!=null && cause.getCause()!=cause; depth++) {
+                cause=cause.getCause();
+            }
+            detail+=" | "+cause.getClass().getName()+": "+String.valueOf(cause.getMessage());
+        }
+        if(detail.length()>450) detail=detail.substring(0,450);
+        Bundle info=new Bundle(); info.putString("oneFailure",detail);
+        reply(FAILED,info); cleanup();""")
+service.write_text(service_source,encoding="utf-8")
+
 # Keep a traceable source, but do not put the old product UI into O!.
 runtime = target / "java/tv/own/channelplus/lovestvprobe/HbbTvRuntimeService.java"
 view = target / "java/tv/own/owntv/features/hbbtv/HbbTvPlayerView.java"
@@ -118,6 +139,9 @@ view = target / "java/tv/own/owntv/features/hbbtv/HbbTvPlayerView.java"
 # Display a truthful startup trace inside the experimental player, avoiding
 # guessing why LOVEStv's broadcaster hint isn't rendered.
 source = view.read_text(encoding="utf-8")
+old_failed = 'case FAILED: fail("Runtime initialization failed; see preceding ChannelplusHbb log",null); break;'
+assert source.count(old_failed) == 1, "Unexpected host-side failure handler"
+source = source.replace(old_failed, 'case FAILED: fail(data.getString("oneFailure","TCL HbbTV failed without details"),null); break;')
 anchor = "    public TvView getTvView() { return tvView; }"
 assert source.count(anchor) == 1
 source = source.replace(anchor, """
