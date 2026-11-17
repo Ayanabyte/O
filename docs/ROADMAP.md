@@ -30,7 +30,7 @@
 - XMLTV múltiple con prioridades, asignación automática fiable y edición manual.
 - Guía EPG con preview cuando el sistema lo permita y controles D-pad.
 - Favoritos, listas, grupos, ordenación y opciones por canal.
-- LOVEStv y HbbTV **solo si el dispositivo y las integraciones oficiales lo permiten**.
+- LOVEStv verificado en la app nativa de TCL. La integración en el reproductor de O! queda pendiente de un servicio HbbTV accesible para terceros. [Investigación y pruebas en Android 11](HBBTV.md).
 
 ## Fase 3: contenido bajo demanda
 - IPTV VOD, USB y NAS en biblioteca unificada, con duplicados agrupados.
