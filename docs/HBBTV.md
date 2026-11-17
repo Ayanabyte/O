@@ -13,7 +13,7 @@ La TCL inspeccionada responde como `Smart TV` (`G07_4K_GB_NF`), Android 11/API 3
 
 `TvView` de API 30 sintoniza y presenta audio y vídeo con la entrada TDT. El firmware carece del servicio de sistema `tv_interactive_app` y de servicios `TvInteractiveAppService` resolubles. Android agregó `TvInteractiveAppManager`, `TvInteractiveAppView` y la notificación pública de AIT desde `TvInputService.Session` en API 33. Incluso con API 33 o superior la integración depende de que el fabricante ofrezca un servicio interactivo compatible. [API de TvInteractiveAppView](https://developer.android.com/reference/android/media/tv/interactive/TvInteractiveAppView) · [API de TvInputService.Session](https://developer.android.com/reference/android/media/tv/TvInputService.Session)
 
-La inspección estática del artefacto de fuentes y de su biblioteca de ejecución confirma que la versión histórica llamaba al registro privado `systemAuthorized` del SDK TCL y accedía a métodos ocultos de su navegador. Incluía excepciones a la política de APIs ocultas y adaptaciones nativas para ese firmware. La presencia de una biblioteca en la lista de Android no concede la autorización del fabricante. O! mantiene su reproductor `TvView` y su permiso normal `READ_TV_LISTINGS`. La integración embebida queda pendiente de un acceso admitido por TCL o de un servicio público compatible. [Flujo histórico de compilación](https://github.com/Ayanabyte/Channelplus/blob/v5.3.17/.github/workflows/channelplus-537-lovestv.yml)
+La inspección histórica encontró mecanismos privados que O! no reutiliza. En la investigación posterior del televisor se identificaron clases y métodos públicos a nivel Java en las bibliotecas de sistema TCL `com.tcl.hbbtv`, `com.tcl.tbrowser` y `com.tcl.tvmanager`. Declararlas como opcionales no garantiza acceso nativo ni autorización en todos los firmware. O! las carga en tiempo de ejecución y no incorpora código de la aplicación de prueba, métodos ocultos ni bypasses. [Flujo histórico de compilación](https://github.com/Ayanabyte/Channelplus/blob/v5.3.17/.github/workflows/channelplus-537-lovestv.yml)
 
 ## Emisiones probadas en la app nativa
 
@@ -52,13 +52,13 @@ La misma APK abrió Antena 3 mediante el `ACTION_VIEW` exportado de `com.tcl.tv`
 - En un televisor de pruebas sin tecla Azul, `adb shell input keyevent KEYCODE_PROG_BLUE` permite enviarla con la TV de TCL en primer plano. Una APK ordinaria carece de `android.permission.INJECT_EVENTS`, que el firmware declara `signature`, para enviar esa tecla a la ventana de otra aplicación. [Código de Android sobre inyección de eventos](https://android.googlesource.com/platform/frameworks/base/+/c7efcde0a81e74f63cff2072992cd500fe1fcf60/services/core/java/com/android/server/input/InputManagerService.java)
 - Para integrarlo en el reproductor de O!, hace falta una interfaz de TCL admitida para terceros o un dispositivo que exponga `TvInteractiveAppService` junto con un proveedor compatible con HbbTV.
 
-## Acceso externo provisional desde O! (`0.3.0-alpha01`)
+## Historial: acceso externo provisional desde O! (`0.3.0-alpha01`)
 
 Esta versión **no integra HbbTV en el reproductor de O!**. En la TCL probada, los controles del reproductor ofrecen **LOVEStv en TCL** únicamente para `La 1 UHD`, `La 2 HD`, `A3 UHD`, `Antena 3` y `Telecinco`, todos servicios TDT del `com.tcl.tvinput`. Radio y los demás canales no muestran el acceso. La lista se basa en nombres reales ya probados; un cambio de nombre del proveedor puede ocultarlo hasta revisar de nuevo el canal.
 
 La secuencia por mando es **OK** para mostrar controles, **→** para enfocar el botón y **OK** para abrir TCL TV. O! verifica que `com.tcl.tv` resuelva el Intent antes de liberar la reproducción. Después envía un `Intent.ACTION_VIEW` con `TvContract.buildChannelUri(id)`, MIME `vnd.android.cursor.item/channel` y paquete `com.tcl.tv`. Resetea el `TvView` antes del cambio para soltar la sesión del sintonizador. Si no se encuentra o no puede abrirse la actividad, conserva el reproductor o vuelve a sintonizar el canal y muestra un mensaje. La consulta del paquete está declarada en `<queries>` para Android 11.
 
-En TCL TV el botón Azul sigue perteneciendo a la aplicación del fabricante. O! no envía teclas a otras aplicaciones. Para regresar, el usuario vuelve a abrir O! desde Google TV. El retorno no es automático. Al reanudarse, el `TvView` de O! crea una sesión nueva para el canal guardado.
+En esta versión el botón Azul pertenecía al reproductor del fabricante. O! no enviaba teclas a otras aplicaciones. Para regresar, el usuario volvía a abrir O! desde Google TV.
 
 ### Pruebas en esta actualización
 
@@ -79,4 +79,12 @@ Los resultados corresponden a las páginas y rutas que el navegador HbbTV TCL re
 - Un cambio rápido de canal en una compilación intermedia expuso un intento de adjuntar un `TvView` que aún tenía padre. Se corrigió manteniendo la misma vista Android y reiniciando su efecto TIF por canal. La build final cambió de canal sin repetir ese cierre.
 - La captura de pantalla del vídeo TIF no está disponible por la composición SIDEBAND de esta TCL. Se verificaron callbacks de vídeo, selección de audio y carga de páginas de LOVEStv en `logcat`; no se declara una inspección de imagen mediante captura.
 
-La integración sigue dependiendo de que el paquete nativo TCL permanezca instalado y resuelva la URI de `TvContract`. Este acceso es una derivación externa al servicio oficial de TCL, no una barra HbbTV propia de O!.
+Esta versión era una derivación externa al servicio oficial de TCL, no una barra HbbTV propia de O!.
+
+## Integración embebida experimental en O! (`0.4.0-alpha01`)
+
+O! conserva la sesión TDT `TvView` y monta el navegador TCL en una superficie superpuesta propia. La nueva clase Kotlin enlaza con métodos públicos del SDK TCL en tiempo de ejecución: inicialización y arranque de `HbbtvServer`, preparación de `Tbrowser` en la vista de O!, traducción de teclas mediante el mapa TCL y cierre del portal. Si las bibliotecas no están disponibles, O! presenta un mensaje y mantiene la emisión TDT.
+
+El control **LOVEStv** solo se muestra en los cinco canales TDT identificados anteriormente y no en radio. Azul es el acceso directo; OK permite elegir el control en pantalla. Atrás se entrega primero al motor; si no lo consume, O! cierra el portal. Cambiar de canal o salir del reproductor libera navegador y sesión mediante el ciclo de vida de O!.
+
+**Estado de verificación:** la APK de depuración compila. En esta entrega aún no se han comprobado en la TCL el arranque del navegador desde O!, la superposición de imagen, el mando, la salida ni la reapertura. LOVEStv embebido sigue siendo experimental y no se considera funcional. Si TCL deniega la inicialización o el motor nativo exige autorización específica del fabricante, se documentará el error y se mantendrá la TDT operativa.

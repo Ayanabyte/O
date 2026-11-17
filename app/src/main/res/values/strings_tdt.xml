@@ -24,6 +24,6 @@
     <string name="tdt_playback_error">No se pudo reproducir el canal.</string>
     <string name="tdt_timeout">El sintonizador no ha confirmado la reproducción.</string>
     <string name="tdt_player_retry">Pulsa OK para reintentar.</string>
-    <string name="tdt_loves">LOVEStv en TCL</string>
+    <string name="tdt_loves">LOVEStv</string>
     <string name="tdt_loves_unavailable">No se pudo abrir el canal en TCL TV. O! mantiene la TDT.</string>
 </resources>

@@ -5,7 +5,7 @@
 
 Aplicación **Android TV** en **Kotlin**. Este repositorio comienza desde cero y no reutiliza código de aplicaciones anteriores.
 
-> **Estado:** `0.3.0-alpha01`, TDT y acceso externo provisional a LOVEStv en la TCL probada.
+> **Estado:** `0.4.0-alpha01`, TDT y primera integración embebida experimental de LOVEStv para validar en TCL.
 
 ## Identidad
 
@@ -22,7 +22,7 @@ Usa **OK** en la lista para sintonizar a pantalla completa. Durante la reproducc
 
 Consulta [`docs/TDT.md`](docs/TDT.md) para los resultados en la TCL y los permisos del fabricante, y [`docs/ROADMAP.md`](docs/ROADMAP.md) para las siguientes fases.
 
-En los canales TCL que se han verificado, pulsa **OK** para mostrar los controles, **→** para enfocar **LOVEStv en TCL** y **OK** para abrir el mismo canal en `com.tcl.tv`. Después, pulsa **Azul** en el mando para entrar en el servicio interactivo. La radio y los canales sin compatibilidad comprobada no muestran el control. Para regresar, abre O! desde Google TV. El reproductor de O! todavía no integra HbbTV y no vuelve automáticamente desde TCL. [Límites y resultados por canal](docs/HBBTV.md).
+En los canales TDT TCL compatibles, pulsa **OK** para mostrar los controles, **→** y **OK** para iniciar LOVEStv dentro del reproductor, o pulsa **Azul** directamente. La radio y los canales sin compatibilidad comprobada no muestran el acceso. Esta integración usa las bibliotecas del SDK de TV TCL disponibles como extensión opcional del sistema. Está compilada, pero todavía requiere validación en la TCL; no se considera funcional hasta confirmar imagen, navegación, cierre y reapertura en el televisor. [Límites y resultados por canal](docs/HBBTV.md).
 
 ## Compilación
 

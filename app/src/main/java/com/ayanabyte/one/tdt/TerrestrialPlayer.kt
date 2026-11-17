@@ -30,6 +30,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.LocalActivity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -63,14 +64,19 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
     var bannerRequest by remember(channel.id) { mutableIntStateOf(0) }
     var bannerVisible by remember(channel.id) { mutableStateOf(true) }
     var loveFocused by remember(channel.id) { mutableStateOf(false) }
-    var handoffError by remember(channel.id) { mutableStateOf(false) }
+    var interactiveMessage by remember(channel.id) { mutableStateOf<String?>(null) }
+    var interactiveActive by remember(channel.id) { mutableStateOf(false) }
     var reception by remember(channel.id, attempt) { mutableStateOf(Reception.Tuning) }
     val context = LocalContext.current
-    val tvView = remember(context) {
-        TvView(context).apply {
-            isFocusable = false
-            isFocusableInTouchMode = false
-            setZOrderMediaOverlay(true)
+    val activity = LocalActivity.current
+    val surface = remember(context) { TerrestrialSurface(context) }
+    val tvView = surface.tvView
+    val interactive = remember(activity, surface, channel.id) {
+        activity?.let { owner ->
+            TclInteractiveRuntime(owner, surface) { message, active ->
+                interactiveMessage = message
+                interactiveActive = active
+            }
         }
     }
     fun showPlaybackControls() {
@@ -82,32 +88,8 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
         bannerRequest++
     }
     fun openLove() {
-        Log.i(TdtLog, "LOVEStv handoff requested for ${channel.id}")
-        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-            setPackage("com.tcl.tv")
-            setDataAndType(TvContract.buildChannelUri(channel.id), "vnd.android.cursor.item/channel")
-        }
-        val resolves = runCatching { context.packageManager.resolveActivity(intent, 0) }.getOrNull() != null
-        if (!resolves) {
-            Log.w(TdtLog, "TCL TV cannot resolve channel ${channel.id}")
-            handoffError = true
-            return
-        }
-        tvView.reset()
-        try {
-            context.startActivity(intent)
-            Log.i(TdtLog, "Opened TCL TV for channel ${channel.id} (${channel.number} ${channel.name})")
-        } catch (error: android.content.ActivityNotFoundException) {
-            Log.w(TdtLog, "TCL TV could not open channel ${channel.id}", error)
-            handoffError = true
-            tvView.tune(channel.inputId, TvContract.buildChannelUri(channel.id))
-            tvView.setStreamVolume(1f)
-        } catch (error: SecurityException) {
-            Log.w(TdtLog, "TCL TV denied channel ${channel.id}", error)
-            handoffError = true
-            tvView.tune(channel.inputId, TvContract.buildChannelUri(channel.id))
-            tvView.setStreamVolume(1f)
-        }
+        Log.i(TdtLog, "LOVEStv activation requested for ${channel.id}")
+        interactive?.activate() ?: run { interactiveMessage = "El servicio interactivo no está disponible en este televisor." }
     }
     LaunchedEffect(Unit) { focus.requestFocus() }
     LaunchedEffect(channel.id, bannerRequest) {
@@ -127,7 +109,27 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 val pressed = native.action == KeyEvent.ACTION_DOWN && native.repeatCount == 0
+                if (interactiveActive && native.keyCode in setOf(
+                        KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+                        KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
+                        KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_PROG_BLUE
+                    )
+                ) {
+                    if (pressed && interactive?.dispatchAndroidKey(native.keyCode) != true &&
+                        native.keyCode == KeyEvent.KEYCODE_BACK
+                    ) interactive?.stopInteractive()
+                    return@onPreviewKeyEvent true
+                }
                 when (native.keyCode) {
+                    KeyEvent.KEYCODE_PROG_BLUE -> {
+                        if (pressed && showLoveControl) openLove()
+                        showLoveControl
+                    }
+                    KeyEvent.KEYCODE_BACK -> {
+                        if (pressed && interactiveActive) interactive?.stopInteractive()
+                        interactiveActive
+                    }
                     KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_CHANNEL_DOWN -> {
                         if (pressed) changeChannel(-1)
                         true
@@ -164,7 +166,7 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
                 }
             }.focusable()
     ) {
-        TunerView(channel, attempt, tvView) { reception = it }
+        TunerView(channel, attempt, surface, interactive) { reception = it }
         if (bannerVisible || reception != Reception.Video) {
             val name = channel.name ?: stringResource(R.string.tdt_unnamed)
             val label = channel.number?.let { stringResource(R.string.tdt_channel_label, it, name) } ?: name
@@ -173,9 +175,7 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
                 Text(label, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
                 val message = reception.message ?: if (reception == Reception.Radio) R.string.tdt_radio else null
                 message?.let { Text(stringResource(it), color = Color(0xFFB0B0B0), fontSize = 18.sp) }
-                if (handoffError) {
-                    Text(stringResource(R.string.tdt_loves_unavailable), color = Color(0xFFB0B0B0), fontSize = 16.sp)
-                }
+                interactiveMessage?.let { Text(it, color = Color(0xFFB0B0B0), fontSize = 16.sp) }
                 if (reception.retry) {
                     Text(stringResource(R.string.tdt_player_retry), color = Color(0xFF4DDCF5), fontSize = 16.sp)
                 }
@@ -196,9 +196,16 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
 }
 
 @Composable
-private fun TunerView(channel: TerrestrialChannel, attempt: Int, tvView: TvView, onReception: (Reception) -> Unit) {
+private fun TunerView(
+    channel: TerrestrialChannel,
+    attempt: Int,
+    surface: TerrestrialSurface,
+    interactive: TclInteractiveRuntime?,
+    onReception: (Reception) -> Unit
+) {
+    val tvView = surface.tvView
     val context = LocalContext.current
-    AndroidView(factory = { tvView }, modifier = Modifier.fillMaxSize())
+    AndroidView(factory = { surface }, modifier = Modifier.fillMaxSize())
     LifecycleResumeEffect(tvView, channel.id, attempt) {
         var active = true
         var audioSelected = false
@@ -289,6 +296,7 @@ private fun TunerView(channel: TerrestrialChannel, attempt: Int, tvView: TvView,
 
         onPauseOrDispose {
             active = false
+            interactive?.close()
             tvView.setCallback(null)
             tvView.reset()
             Log.i(TdtLog, "Session reset for ${channel.id}")

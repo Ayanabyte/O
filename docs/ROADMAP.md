@@ -30,7 +30,7 @@
 - XMLTV múltiple con prioridades, asignación automática fiable y edición manual.
 - Guía EPG con preview cuando el sistema lo permita y controles D-pad.
 - Favoritos, listas, grupos, ordenación y opciones por canal.
-- LOVEStv verificado en la app nativa de TCL. O! ofrece un **acceso externo provisional** en los cuatro canales TCL probados mediante `ACTION_VIEW` y `TvContract`, libera su sesión y permite retomar el reproductor al volver desde el lanzador. HbbTV no está integrado en O! y el retorno no es automático. [Investigación, alcance y pruebas en Android 11](HBBTV.md).
+- O! incluye desde `0.4.0-alpha01` un **puente experimental embebido** hacia las bibliotecas del SDK de TV TCL, con acceso por botón Azul y control en pantalla solo en canales TDT compatibles. Compila, pero queda pendiente la validación completa en el televisor (LOVEStv visible, mando, salida, cambio de canal y reapertura). No marcar como funcional hasta completar esas pruebas. [Investigación, alcance y pruebas en Android 11](HBBTV.md).
 
 ## Fase 3: contenido bajo demanda
 - IPTV VOD, USB y NAS en biblioteca unificada, con duplicados agrupados.
