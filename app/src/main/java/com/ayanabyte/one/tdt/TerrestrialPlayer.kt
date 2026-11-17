@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import com.ayanabyte.one.hbbtv.HbbTvBridge
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -49,65 +51,19 @@ private enum class Reception(val message: Int? = null, val retry: Boolean = fals
     Timeout(R.string.tdt_timeout, true)
 }
 
-private val tclLoveChannelNames = setOf("la 1 uhd", "la 2 hd", "a3 uhd", "antena 3", "telecinco")
-
-private fun TerrestrialChannel.supportsTclLove(): Boolean =
-    !radio && inputId.startsWith("com.tcl.tvinput/") && name?.trim()?.lowercase() in tclLoveChannelNames
-
 @Composable
 internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int) -> Unit) {
-    val showLoveControl = channel.supportsTclLove()
     val focus = remember { FocusRequester() }
-    val loveControlFocus = remember { FocusRequester() }
     var attempt by remember(channel.id) { mutableIntStateOf(0) }
     var bannerRequest by remember(channel.id) { mutableIntStateOf(0) }
     var bannerVisible by remember(channel.id) { mutableStateOf(true) }
-    var loveFocused by remember(channel.id) { mutableStateOf(false) }
-    var handoffError by remember(channel.id) { mutableStateOf(false) }
     var reception by remember(channel.id, attempt) { mutableStateOf(Reception.Tuning) }
     val context = LocalContext.current
-    val tvView = remember(context) {
-        TvView(context).apply {
-            isFocusable = false
-            isFocusableInTouchMode = false
-            setZOrderMediaOverlay(true)
-        }
-    }
+    val hbbtv = remember(context, channel.id, attempt) { HbbTvBridge(context) }
+    val tvView = hbbtv.tvView
     fun showPlaybackControls() {
         bannerVisible = true
         bannerRequest++
-    }
-    fun focusLoveControl() {
-        loveControlFocus.requestFocus()
-        bannerRequest++
-    }
-    fun openLove() {
-        Log.i(TdtLog, "LOVEStv handoff requested for ${channel.id}")
-        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-            setPackage("com.tcl.tv")
-            setDataAndType(TvContract.buildChannelUri(channel.id), "vnd.android.cursor.item/channel")
-        }
-        val resolves = runCatching { context.packageManager.resolveActivity(intent, 0) }.getOrNull() != null
-        if (!resolves) {
-            Log.w(TdtLog, "TCL TV cannot resolve channel ${channel.id}")
-            handoffError = true
-            return
-        }
-        tvView.reset()
-        try {
-            context.startActivity(intent)
-            Log.i(TdtLog, "Opened TCL TV for channel ${channel.id} (${channel.number} ${channel.name})")
-        } catch (error: android.content.ActivityNotFoundException) {
-            Log.w(TdtLog, "TCL TV could not open channel ${channel.id}", error)
-            handoffError = true
-            tvView.tune(channel.inputId, TvContract.buildChannelUri(channel.id))
-            tvView.setStreamVolume(1f)
-        } catch (error: SecurityException) {
-            Log.w(TdtLog, "TCL TV denied channel ${channel.id}", error)
-            handoffError = true
-            tvView.tune(channel.inputId, TvContract.buildChannelUri(channel.id))
-            tvView.setStreamVolume(1f)
-        }
     }
     LaunchedEffect(Unit) { focus.requestFocus() }
     LaunchedEffect(channel.id, bannerRequest) {
@@ -126,6 +82,7 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
         Modifier.fillMaxSize().background(Color.Black).focusRequester(focus)
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
+                if (hbbtv.handleKey(native)) return@onPreviewKeyEvent true
                 val pressed = native.action == KeyEvent.ACTION_DOWN && native.repeatCount == 0
                 when (native.keyCode) {
                     KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_CHANNEL_DOWN -> {
@@ -136,25 +93,12 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
                         if (pressed) changeChannel(1)
                         true
                     }
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        if (pressed && showLoveControl) {
-                            Log.i(TdtLog, "LOVEStv control navigation banner=$bannerVisible focused=$loveFocused")
-                            if (bannerVisible) focusLoveControl() else showPlaybackControls()
-                        }
-                        true
-                    }
-                    KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        if (pressed && loveFocused) focus.requestFocus()
-                        true
-                    }
+                    KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_LEFT -> false
                     KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                         if (pressed) {
-                            Log.i(TdtLog, "Player select banner=$bannerVisible love=$loveFocused reception=$reception")
                             when {
-                                loveFocused -> openLove()
                                 reception.retry -> attempt++
                                 !bannerVisible -> showPlaybackControls()
-                                showLoveControl -> focusLoveControl()
                                 else -> bannerRequest++
                             }
                         }
@@ -164,7 +108,7 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
                 }
             }.focusable()
     ) {
-        TunerView(channel, attempt, tvView) { reception = it }
+        TunerView(channel, attempt, hbbtv) { reception = it }
         if (bannerVisible || reception != Reception.Video) {
             val name = channel.name ?: stringResource(R.string.tdt_unnamed)
             val label = channel.number?.let { stringResource(R.string.tdt_channel_label, it, name) } ?: name
@@ -173,22 +117,8 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
                 Text(label, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
                 val message = reception.message ?: if (reception == Reception.Radio) R.string.tdt_radio else null
                 message?.let { Text(stringResource(it), color = Color(0xFFB0B0B0), fontSize = 18.sp) }
-                if (handoffError) {
-                    Text(stringResource(R.string.tdt_loves_unavailable), color = Color(0xFFB0B0B0), fontSize = 16.sp)
-                }
                 if (reception.retry) {
                     Text(stringResource(R.string.tdt_player_retry), color = Color(0xFF4DDCF5), fontSize = 16.sp)
-                }
-                if (showLoveControl) {
-                    Row(Modifier.padding(top = 10.dp)) {
-                        FocusButton(
-                            stringResource(R.string.tdt_loves),
-                            Modifier.focusRequester(loveControlFocus)
-                                .onFocusChanged { loveFocused = it.isFocused }
-                                .background(Color(0xFF151515)).padding(horizontal = 18.dp, vertical = 9.dp),
-                            onClick = ::openLove
-                        )
-                    }
                 }
             }
         }
@@ -196,10 +126,12 @@ internal fun TerrestrialPlayer(channel: TerrestrialChannel, changeChannel: (Int)
 }
 
 @Composable
-private fun TunerView(channel: TerrestrialChannel, attempt: Int, tvView: TvView, onReception: (Reception) -> Unit) {
+private fun TunerView(channel: TerrestrialChannel, attempt: Int, hbbtv: HbbTvBridge, onReception: (Reception) -> Unit) {
     val context = LocalContext.current
-    AndroidView(factory = { tvView }, modifier = Modifier.fillMaxSize())
-    LifecycleResumeEffect(tvView, channel.id, attempt) {
+    val tvView = hbbtv.tvView
+    AndroidView(factory = { hbbtv.view }, modifier = Modifier.fillMaxSize())
+    DisposableEffect(hbbtv) { onDispose { hbbtv.release() } }
+    LifecycleResumeEffect(hbbtv, channel.id, attempt) {
         var active = true
         var audioSelected = false
         var contentBlocked = false
@@ -213,11 +145,15 @@ private fun TunerView(channel: TerrestrialChannel, attempt: Int, tvView: TvView,
         tvView.setCallback(object : TvView.TvInputCallback() {
             override fun onVideoAvailable(inputId: String) {
                 Log.i(TdtLog, "Video available for ${channel.id} (${channel.number} ${channel.name})")
-                if (!channel.radio) report(inputId, Reception.Video)
+                if (!channel.radio) {
+                    report(inputId, Reception.Video)
+                    hbbtv.update(channel.inputId, channel.id, true, attempt.toLong(), true)
+                }
             }
 
             override fun onVideoUnavailable(inputId: String, reason: Int) {
                 Log.i(TdtLog, "Video unavailable for ${channel.id}, reason=$reason")
+                hbbtv.update(channel.inputId, channel.id, false, attempt.toLong(), false)
                 val reception = when (reason) {
                     TvInputManager.VIDEO_UNAVAILABLE_REASON_TUNING,
                     TvInputManager.VIDEO_UNAVAILABLE_REASON_BUFFERING -> Reception.Tuning
@@ -275,6 +211,7 @@ private fun TunerView(channel: TerrestrialChannel, attempt: Int, tvView: TvView,
             ) {
                 onReception(Reception.Disconnected)
             } else {
+                hbbtv.update(channel.inputId, channel.id, false, attempt.toLong(), !channel.radio)
                 tvView.tune(channel.inputId, TvContract.buildChannelUri(channel.id))
                 tvView.setStreamVolume(1f)
                 Log.i(TdtLog, "Tune requested for ${channel.id} (${channel.number} ${channel.name})")
@@ -291,6 +228,7 @@ private fun TunerView(channel: TerrestrialChannel, attempt: Int, tvView: TvView,
             active = false
             tvView.setCallback(null)
             tvView.reset()
+            hbbtv.suspend()
             Log.i(TdtLog, "Session reset for ${channel.id}")
         }
     }

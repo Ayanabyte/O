@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools">
+    <application android:process="com.tcl.tv" tools:replace="android:process">
+        <uses-library android:name="com.tcl.hbbtv.HbbtvServer" android:required="false"/>
+        <uses-library android:name="com.tcl.tbrowser" android:required="false"/>
+        <uses-library android:name="com.tcl.tvmanager" android:required="false"/>
+        <uses-library android:name="com.tcl.os.system" android:required="false"/>
+        <uses-library android:name="com.tcl.deviceinfo" android:required="false"/>
+        <uses-native-library android:name="libcom_tcl_hbbtv_jni.tcl.so" android:required="false"/>
+        <uses-native-library android:name="libcom_tcl_tbrowser_jni.tcl.so" android:required="false"/>
+        <uses-native-library android:name="libsitatv.so" android:required="false"/>
+        <service android:name="tv.own.channelplus.lovestvprobe.HbbTvRuntimeService"
+            android:process="com.tcl.tv" android:exported="false"/>
+    </application>
+</manifest>

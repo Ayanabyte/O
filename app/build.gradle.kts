@@ -23,6 +23,16 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    flavorDimensions += "tvEngine"
+    productFlavors {
+        create("standard") { dimension = "tvEngine" }
+        create("tclHbbtv") {
+            dimension = "tvEngine"
+            applicationIdSuffix = ".hbbtvtest"
+            ndk { abiFilters += listOf("armeabi-v7a") }
+        }
+    }
+
     buildFeatures {
         buildConfig = true
         compose = true
@@ -54,5 +64,7 @@ dependencies {
     // TV-specific components for upcoming remote-control flows.
     implementation("androidx.tv:tv-material:1.1.0")
 
+    // Populated only for the TCL experimental flavor by scripts/prepare_tcl_hbbtv.py.
+    add("tclHbbtvImplementation", files("libs/lovestv-runtime.jar"))
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
