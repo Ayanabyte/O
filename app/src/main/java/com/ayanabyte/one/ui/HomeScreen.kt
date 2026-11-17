@@ -35,6 +35,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ayanabyte.one.BuildConfig
+import com.ayanabyte.one.tdt.TerrestrialTvScreen
 
 private val Ink = Color(0xFF000000)
 private val Snow = Color(0xFFFFFFFF)
@@ -46,8 +48,10 @@ private data class Section(
     val description: String
 )
 
+private const val TelevisionIndex = 0
+
 private val sections = listOf(
-    Section("Televisión", "Canales TDT e IPTV"),
+    Section("Televisión", "Canales TDT"),
     Section("Radio y música", "Emisoras y servicios"),
     Section("Películas", "Biblioteca VOD"),
     Section("Series", "Episodios y progreso"),
@@ -61,6 +65,11 @@ fun HomeScreen() {
     var sectionOpen by rememberSaveable { mutableStateOf(false) }
     val selectedTileFocus = remember { FocusRequester() }
     val backButtonFocus = remember { FocusRequester() }
+
+    if (sectionOpen && selectedIndex == TelevisionIndex) {
+        TerrestrialTvScreen(onBack = { sectionOpen = false })
+        return
+    }
 
     BackHandler(enabled = sectionOpen) { sectionOpen = false }
     LaunchedEffect(sectionOpen) {
@@ -97,7 +106,7 @@ fun HomeScreen() {
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "Base inicial de Android TV. Las fuentes se conectarán en las próximas fases.",
+                text = "Abre Televisión para ver los canales de la antena.",
                 color = Grey,
                 fontSize = 17.sp
             )
@@ -152,7 +161,7 @@ fun HomeScreen() {
 
         Spacer(Modifier.height(24.dp))
         Text(
-            text = "O! · 0.1.0-alpha01 · Estructura inicial",
+            text = "O! · ${BuildConfig.VERSION_NAME}",
             color = Color(0xFF777777),
             fontSize = 13.sp
         )
@@ -189,7 +198,7 @@ private fun SectionTile(section: Section, modifier: Modifier, onClick: () -> Uni
 }
 
 @Composable
-private fun FocusButton(text: String, modifier: Modifier, onClick: () -> Unit) {
+internal fun FocusButton(text: String, modifier: Modifier, onClick: () -> Unit) {
     var isFocused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(12.dp)
     Row(

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tdt_title">Televisión TDT</string>
+    <string name="tdt_television">Televisión</string>
+    <string name="tdt_radio">Radio TDT</string>
+    <string name="tdt_loading">Buscando canales en el televisor…</string>
+    <string name="tdt_permission">Permite a O! leer la lista de canales del televisor.</string>
+    <string name="tdt_allow">Permitir acceso</string>
+    <string name="tdt_permission_settings">Abrir ajustes de permisos</string>
+    <string name="tdt_permission_restricted">El proveedor de TV ha rechazado la consulta de los canales.</string>
+    <string name="tdt_no_tuner">El televisor no expone una entrada de sintonizador a O!.</string>
+    <string name="tdt_no_channels">No hay canales TDT visibles para O!. Comprueba la lista de canales en la aplicación de TV del televisor.</string>
+    <string name="tdt_catalog_error">No se pudo leer la lista de canales del televisor.</string>
+    <string name="tdt_retry">Reintentar</string>
+    <string name="tdt_count">%1$d TV · %2$d radio</string>
+    <string name="tdt_unnamed">Canal sin nombre</string>
+    <string name="tdt_channel_label">%1$s · %2$s</string>
+    <string name="tdt_tuning">Sintonizando…</string>
+    <string name="tdt_signal">Señal débil o no disponible.</string>
+    <string name="tdt_disconnected">El sintonizador se ha desconectado.</string>
+    <string name="tdt_busy">El sintonizador está ocupado.</string>
+    <string name="tdt_blocked">El control parental del televisor bloquea el canal.</string>
+    <string name="tdt_playback_permission">El televisor ha denegado el acceso al canal.</string>
+    <string name="tdt_playback_error">No se pudo reproducir el canal.</string>
+    <string name="tdt_timeout">El sintonizador no ha confirmado la reproducción.</string>
+    <string name="tdt_player_retry">Pulsa OK para reintentar.</string>
+</resources>
