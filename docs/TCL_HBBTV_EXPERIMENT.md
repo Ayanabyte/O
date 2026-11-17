@@ -101,3 +101,7 @@ DIAG 3 mostró una excepción remota de ConnectivityService.getAllNetworks() en 
 ## DIAG 5 — etapas del arranque HbbTV
 
 Esta variante registra y presenta la última etapa emitida por el servicio en `lastStage`: registro de autorización, preparación del navegador del fabricante, inicialización de `HbbtvServer`, llamada a `Tbrowser.initTbrowser`, respuesta del navegador y `HbbtvServer.start`. Así se puede diferenciar un arranque todavía pendiente de un bloqueo. Conserva los permisos de DIAG 4, el reproductor TDT y el error detallado. Nombre: O! LOVEStv DIAG 5. Paquete separado `com.ayanabyte.one.hbbtvdiag5`.
+
+## DIAG 6 — montaje de navegador y callback TCL
+
+En DIAG 5, `Tbrowser.initTbrowser` se invocó, pero no notificó el resultado antes del timeout. DIAG 6 reproduce mejor la jerarquía de la prueba histórica 1.45: el navegador transparente se añade al contenedor Android `android.R.id.content` de la Activity ya existente, no a su `decorView`; el `TvView` TDT permanece intacto. Se instrumenta el registro del listener, la presencia de token de ventana y **todos los callbacks** que emita Tbrowser. No se fuerza a iniciar HbbTV sin callback. Paquete independiente `com.ayanabyte.one.hbbtvdiag6`.

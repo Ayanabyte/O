@@ -4,7 +4,7 @@
     <!-- TCL HbbTV calls ConnectivityManager.getAllNetworks() and needs permission -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.INTERNET"/>
-    <application android:process="com.tcl.tv" android:label="O! LOVEStv DIAG 5" tools:replace="android:process,android:label">
+    <application android:process="com.tcl.tv" android:label="O! LOVEStv DIAG 6" tools:replace="android:process,android:label">
         <uses-library android:name="com.tcl.hbbtv.HbbtvServer" android:required="false"/>
         <uses-library android:name="com.tcl.tbrowser" android:required="false"/>
         <uses-library android:name="com.tcl.tvmanager" android:required="false"/>

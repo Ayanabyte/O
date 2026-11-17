@@ -111,7 +111,7 @@ shutil.copyfile(SRC / "libs/lovestv-runtime.jar", jar)
 # before invoking the manufacturer's real authorization. Adapt only this
 # guard in our own legacy client; TCL's systemAuthorized remains unchanged.
 old_id = b"tv.own.owntv.tdt2"
-new_id = b"com.ayanabyte.one.hbbtvdiag5"
+new_id = b"com.ayanabyte.one.hbbtvdiag6"
 class_path = "tv/own/channelplus/lovestvprobe/ExperimentalAuthorization.class"
 guard = len(old_id).to_bytes(2, "big") + old_id
 replacement = len(new_id).to_bytes(2, "big") + new_id
@@ -165,6 +165,24 @@ service_source = service_source.replace(old_reply, """
         if(detail.length()>450) detail=detail.substring(0,450);
         Bundle info=new Bundle(); info.putString("oneFailure",detail);
         reply(FAILED,info); cleanup();""")
+# The working 1.45 probe mounted Tbrowser's root inside Activity content.
+# The previous O! bridge mounted it in decorView, a different view hierarchy.
+# Keep the existing TvView and content; mount only the transparent browser root.
+old_parent = 'activityParent=(ViewGroup)playerActivity.getWindow().getDecorView();'
+new_parent = 'activityParent=(ViewGroup)playerActivity.findViewById(android.R.id.content);'
+if service_source.count(old_parent) != 1:
+    raise RuntimeError("Unexpected TCL browser parent hierarchy")
+service_source = service_source.replace(old_parent,new_parent)
+# The physical Activity is required, not a Service/window context.
+attach_line = 'activityParent.addView(root,new ViewGroup.LayoutParams(-1,-1));'
+if service_source.count(attach_line)!=1:
+    raise RuntimeError("Cannot verify browser attachment")
+service_source=service_source.replace(attach_line,
+    attach_line + '''
+            Log.i(TAG,"TCL root parent="+activityParent.getClass().getName()
+                +" windowToken="+(root.getWindowToken()!=null)
+                +" size="+root.getWidth()+"x"+root.getHeight());''')
+
 # Track the *real* runtime stages across Messenger IPC.
 def replace_runtime_one(before, after, label):
     global service_source
@@ -212,6 +230,29 @@ replace_runtime_one(
     '.invoke(browser,windowContext,root,false); oneStage("6: Tbrowser.init invoked; waiting for callback");',
     "browser initialization"
 )
+replace_runtime_one(
+    'initListener=Proxy.newProxyInstance(listener.getClassLoader(),new Class<?>[]{listener},(proxy,method,args)->{',
+    '''initListener=Proxy.newProxyInstance(listener.getClassLoader(),new Class<?>[]{listener},(proxy,method,args)->{
+                    if(method.getDeclaringClass()!=Object.class) {
+                        String callback=method.getName();
+                        String info="Tbrowser callback="+callback
+                            +" argc="+(args==null ? 0 : args.length);
+                        Log.i(TAG,info);
+                        main.post(()->oneStage("callback: "+callback));
+                    }''',
+    "browser callback trace"
+)
+replace_runtime_one(
+    'browser.getClass().getMethod("setTbrowserInitEventListener",listener).invoke(browser,initListener);',
+    'browser.getClass().getMethod("setTbrowserInitEventListener",listener).invoke(browser,initListener); oneStage("5: callback listener installed");',
+    "browser callback registration"
+)
+replace_runtime_one(
+    'browser.getClass().getMethod("initTbrowser",Context.class,ViewGroup.class,boolean.class)',
+    'oneStage("5a: calling native browser, Activity="+(windowContext instanceof android.app.Activity)+" token="+(root.getWindowToken()!=null)); browser.getClass().getMethod("initTbrowser",Context.class,ViewGroup.class,boolean.class)',
+    "browser Activity and window token"
+)
+
 replace_runtime_one(
     'Object result=call(engine,"start");',
     'oneStage("8: HbbtvServer.start requested"); Object result=call(engine,"start");',
