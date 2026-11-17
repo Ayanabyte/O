@@ -105,3 +105,8 @@ Esta variante registra y presenta la última etapa emitida por el servicio en `l
 ## DIAG 6 — montaje de navegador y callback TCL
 
 En DIAG 5, `Tbrowser.initTbrowser` se invocó, pero no notificó el resultado antes del timeout. DIAG 6 reproduce mejor la jerarquía de la prueba histórica 1.45: el navegador transparente se añade al contenedor Android `android.R.id.content` de la Activity ya existente, no a su `decorView`; el `TvView` TDT permanece intacto. Se instrumenta el registro del listener, la presencia de token de ventana y **todos los callbacks** que emita Tbrowser. No se fuerza a iniciar HbbTV sin callback. Paquete independiente `com.ayanabyte.one.hbbtvdiag6`.
+
+
+## DIAG 7 — aislar puente CA experimental
+
+La captura de DIAG 6 muestra `lastStage=3` y `NativeSection.installCertificates` con código -1; DIAG 5 llegó hasta `Tbrowser.init`, por lo que el fallo CA no es universal. En DIAG 7 se **omite solo** el puente nativo de CA heredado en el proceso de prueba. No se instala ningún certificado ni se desactiva la validación TLS: se mantiene el almacén de CA de Android. Se conservan `NativeUA.prepare`, la autorización TCL, el navegador embebido y los callbacks de DIAG 6. Se valida si esta rutina experimental es prescindible en este firmware. Paquete `com.ayanabyte.one.hbbtvdiag7`, independiente de O! estable. Si el fabricante necesita este puente, el navegador puede continuar sin iniciar; no se considerará éxito una compilación correcta.
