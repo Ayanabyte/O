@@ -179,3 +179,12 @@ systemAuthorized=true descarta rechazo en esa llamada, pero NO demuestra permiso
 La ausencia del puente de certificados en DIAG7 se correlaciona estrechamente con el fallo nativo, pero no demuestra por sí sola la causa exacta del puntero nulo. NO ejecutar nuevamente DIAG7, ni desactivar el puente.
 DIAG5 y DIAG6 ya no están instaladas en el dispositivo, según pm list packages; sus archivos privados no son recuperables mediante run-as. DIAG7 fue revertida en la rama experimental; se añadió una guarda para evitar instalar el puente de CA dos veces en el mismo proceso.
 Próximo dato útil sin repetir el arranque: logcat almacenado de ChannelplusHbb y trazas Tbrowser/NativeSection, si aún existen. La rama experimental permanece sin fusionar; funcionamiento real de LOVEStv no demostrado.
+
+## Validación de APK antiguas y gestión de fuentes (18/11/2026)
+
+- El usuario confirma: Channel+ 5.3.14 no abre LOVEStv y Channel+ 5.3.13 no permite añadir/configurar fuentes para probar canales. No presentarlas como versiones funcionales.
+- La APK 5.3.13 procede de la ejecución de GitHub Actions 41752572973, commit bef9ebf5b27eb252b89c7fa6cae1c0f59f434ffc.
+- Comparación por SHA Git de 5.3.13 y tag v5.3.17: ManageSourcesScreen.kt (79066ba6364e597555f09abab6419a67aa764901), AddSourceScreen.kt (51fd1f357007414de2d7e1c64ba476bc92d5c3ce), AddSourceChooserScreen.kt (9255b01de23a253aad7d6e88acc6f43e5749c570) son **idénticas** en ambos puntos del historial.
+- El código sí incluye formularios M3U/Xtream/Stalker y sintonizador, pero su mera presencia no demuestra que se pueda entrar en ellos o guardar fuentes en el dispositivo. No hay diagnóstico suficiente para atribuir el fallo a un archivo en particular.
+- El histórico fix_5313_playback_controls.py conserva el adaptador de controles lovestv_playback_145.js (botón verde). Este adaptador necesita un Tbrowser operativo. No demuestra que v5.3.13 arranque correctamente.
+- Evitar ciclos de APK históricas; conservar O! estable como base TDT y tratar la integración TCL como rama experimental no fusionada, resolviendo primero la inicialización del navegador y el puente nativo.
