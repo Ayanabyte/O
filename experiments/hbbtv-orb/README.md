@@ -48,6 +48,20 @@ no implica conformidad con HbbTV 2.0.5 ni soporte de producción.
    Busca `O_ORB_POC: SESSION_READY`. En caso de error, adjunta las líneas de
    `AndroidRuntime` y `chromium`, sin exponer credenciales ni datos personales.
 
+## Si la TCL muestra pantalla gris
+
+En la primera instalación (18-11-2026) la TCL mostró solo una pantalla gris,
+por lo que **no se considera superada** la prueba del motor en el televisor.
+La segunda compilación añade un pequeño panel nativo con el estado: `01` inicio,
+`02` servidor local, `03` inicializando ORB, `04 SESSION_READY`,
+`05` escenario, `06` AIT enviada, `07` petición de la página y
+`08` confirmación de ejecución JavaScript. También sirve la página de prueba
+como `application/vnd.hbbtv.xhtml+xml` en lugar de `text/html`.
+
+Si se queda detenida en alguna etapa, anota el **último número visible** y
+recoge `adb logcat -d -s O_ORB_POC:I AndroidRuntime:E chromium:E`.
+El panel es diagnóstico: **no convierte** la APK en una app LOVEStv funcional.
+
 ## Criterios de validación
 
 - **Nivel 1, compilación:** workflow verde con APK realmente generada.
