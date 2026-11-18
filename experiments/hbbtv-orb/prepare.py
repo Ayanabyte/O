@@ -295,21 +295,4 @@ patch(
     "        mLabStatus = new android.widget.TextView(this);",
 )
 
-patch(
-    browser,
-    '                + "document.dispatchEvent(e);"' + "\n"
-    + '                + "})()";' + "\n"
-    + '        evaluateJavascript(js, null);' + "\n"
-    + '    }' + "\n"
-    + "\n    private void dispatchJavaScriptTextInput(String text) {",
-    '                + "document.dispatchEvent(e);"' + "\n"
-    + '                + "})()";' + "\n"
-    + '        evaluateJavascript(js, result -> {' + "\n"
-    + '            // Force the TV surface to compose the full WebView after a remote key.' + "\n"
-    + '            invalidate();' + "\n"
-    + '            postInvalidateOnAnimation();' + "\n"
-    + '        });' + "\n"
-    + '    }' + "\n"
-    + "\n    private void dispatchJavaScriptTextInput(String text) {",
-)
 print("ORB smoke test prepared; main O! application is not involved.")

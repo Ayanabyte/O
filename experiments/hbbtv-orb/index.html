@@ -47,6 +47,10 @@
     document.addEventListener('keydown', function(event) {
       var code = event.keyCode || event.which || 0;
       setText('key', 'Tecla recibida: ' + code);
+      // Diagnostic: trigger a complete document repaint on TV WebView.
+      var root = document.documentElement;
+      root.style.visibility = 'hidden';
+      window.requestAnimationFrame(function() { root.style.visibility = 'visible'; });
       log('KEY_' + code);
     }, false);
   }
