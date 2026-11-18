@@ -232,11 +232,6 @@ orb_session.write_text(
 browser = "android/orblibrary/src/main/java/org/orbtv/orblibrary/BrowserView.java"
 patch(
     browser,
-    "        setBackgroundColor(Color.TRANSPARENT);",
-    "        setBackgroundColor(Color.BLACK);",
-)
-patch(
-    browser,
     "            @Override\n            public void onPageCommitVisible(WebView view, String url) {",
     "            @Override\n"
     "            public void onPageFinished(WebView view, String url) {\n"
