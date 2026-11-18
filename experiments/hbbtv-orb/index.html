@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//HbbTV//1.1.1//EN" "http://www.hbbtv.org/dtd/HbbTV-1.1.1.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="es" lang="es">
+<head>
+  <title>O! HbbTV ORB Lab</title>
+  <meta http-equiv="content-type" content="application/vnd.hbbtv.xhtml+xml; charset=UTF-8"/>
+  <style type="text/css">
+    html,body { background: #000; color: #fff; margin:0; padding:0; font:28px sans-serif; width:100%;height:100%; }
+    #body { position:absolute;left:7%;top:12%;width:86%; }
+    #brand { font-size:88px; font-weight:700; letter-spacing:4px; }
+    #brand span {color:#4DDCF5;}
+    .small {color:#aaa;font-size:22px;margin-top:18px;}
+    #state {font-size:32px;margin-top:42px;}
+    #key {font-size:25px;color:#4DDCF5;margin-top:30px;}
+    #foot {position:absolute;left:7%;bottom:8%;font-size:20px;color:#aaa;}
+  </style>
+  <script type="text/javascript">
+  //<![CDATA[
+  function setText(id, text) { document.getElementById(id).textContent = text; }
+  function log(message) { if (window.console) console.log('O_ORB_POC_WEB ' + message); }
+  function init() {
+    setText('state', 'Documento HbbTV iniciado');
+    log('DOCUMENT_LOADED');
+    var hasFactory = typeof window.oipfObjectFactory !== 'undefined';
+    setText('capability', 'API OIPF: ' + (hasFactory ? 'presente' : 'no detectada'));
+    try {
+      var mgr = document.getElementById('applicationManager');
+      var app = mgr && mgr.getOwnerApplication ? mgr.getOwnerApplication(document) : null;
+      if (app) {
+        setText('capability', 'OIPF: aplicación reconocida por ORB');
+        if (app.privateData && app.privateData.keyset) {
+          app.privateData.keyset.setValue(0x1FF);
+        }
+        log('OWNER_APPLICATION_OK');
+      } else {
+        log('OWNER_APPLICATION_UNAVAILABLE');
+      }
+    } catch (e) {
+      log('OWNER_APPLICATION_ERROR ' + String(e));
+    }
+    document.addEventListener('keydown', function(event) {
+      var code = event.keyCode || event.which || 0;
+      setText('key', 'Tecla recibida: ' + code);
+      log('KEY_' + code);
+    }, false);
+  }
+  window.onload=init;
+  //]]>
+  </script>
+</head>
+<body>
+  <object id="applicationManager" type="application/oipfApplicationManager" style="width:0;height:0;position:absolute;"></object>
+  <div id="body">
+    <div id="brand">O<span>!</span></div>
+    <div class="small">ONE ENTERTAINMENT — LABORATORIO HbbTV</div>
+    <div id="state">Iniciando sesión ORB...</div>
+    <div class="small" id="capability">Comprobando API OIPF</div>
+    <div id="key">Pulsa una flecha u OK en el mando.</div>
+  </div>
+  <div id="foot">Prueba local de emisión y AIT simuladas · NO es LOVEStv ni la TDT del televisor</div>
+</body>
+</html>
