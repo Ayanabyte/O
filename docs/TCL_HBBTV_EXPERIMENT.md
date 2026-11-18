@@ -169,3 +169,13 @@ logcat -d -v time -t 1200 -s ChannelplusHbb:V ChannelplusLoveProbe:V '*:S'
 
 The stored report is written by Report.add in the historical runtime JAR.
 It may be absent; that does not prove anything about TCL authorization.
+
+## Registro de DIAG 7 recuperado con Bugjaeger (18/11/2026)
+
+El informe privado lovestv-report.txt de com.ayanabyte.one.hbbtvdiag7 (2526 bytes) contiene tres ejecuciones, a las 00:39:38, 00:40:12 y 00:40:50.
+En las tres secuencias se observa: verificación SHA256 del APK TCL; llamada systemAuthorized devolviendo true para el PID experimental; tcl.webkit accesible y constructor WebView(Context) visible; mensaje UA 1.45 'instalacion antes de init=0' con perfil RT51A/V138/HbbTV1.5.1.
+No se observa respuesta exitosa de Tbrowser ni arranque de LOVEStv. Poco después, las tres trazas de crash registran SIGSEGV en libsitatv.so!tos_system_decrypt_cert+424 desde libhbbtv-server.so!api_task_entry+932.
+systemAuthorized=true descarta rechazo en esa llamada, pero NO demuestra permisos efectivos para todas las funciones HbbTV. El valor 0 del log de UA no debe interpretarse sin contrato de la función. La disponibilidad de tcl.webkit no prueba renderizado.
+La ausencia del puente de certificados en DIAG7 se correlaciona estrechamente con el fallo nativo, pero no demuestra por sí sola la causa exacta del puntero nulo. NO ejecutar nuevamente DIAG7, ni desactivar el puente.
+DIAG5 y DIAG6 ya no están instaladas en el dispositivo, según pm list packages; sus archivos privados no son recuperables mediante run-as. DIAG7 fue revertida en la rama experimental; se añadió una guarda para evitar instalar el puente de CA dos veces en el mismo proceso.
+Próximo dato útil sin repetir el arranque: logcat almacenado de ChannelplusHbb y trazas Tbrowser/NativeSection, si aún existen. La rama experimental permanece sin fusionar; funcionamiento real de LOVEStv no demostrado.
