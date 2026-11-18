@@ -219,10 +219,14 @@ patch(http,
 # The first TCL test reached JavaScript but showed only grey. The second stage
 # isolates actual WebView visibility/paint rather than claiming HbbTV is usable.
 # A stock AOSP WebView on a TV can fail to composite with forced software layers.
-patch(
-    "android/orblibrary/src/main/java/org/orbtv/orblibrary/OrbSession.java",
-    "mBrowserView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);",
-    "mBrowserView.setLayerType(View.LAYER_TYPE_HARDWARE, null);",
+orb_session = orb / "android/orblibrary/src/main/java/org/orbtv/orblibrary/OrbSession.java"
+orb_src = orb_session.read_text(encoding="utf-8")
+old_layer = "mBrowserView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);"
+if orb_src.count(old_layer) != 2:
+    raise RuntimeError("Expected two software WebView layer declarations")
+orb_session.write_text(
+    orb_src.replace(old_layer, "mBrowserView.setLayerType(View.LAYER_TYPE_HARDWARE, null);"),
+    encoding="utf-8",
 )
 
 browser = "android/orblibrary/src/main/java/org/orbtv/orblibrary/BrowserView.java"
