@@ -62,6 +62,17 @@ Si se queda detenida en alguna etapa, anota el **último número visible** y
 recoge `adb logcat -d -s O_ORB_POC:I AndroidRuntime:E chromium:E`.
 El panel es diagnóstico: **no convierte** la APK en una app LOVEStv funcional.
 
+### TCL: pantalla gris, paso 09 con WebView OCULTO
+
+El 18-11-2026, la prueba v3 llegó a `09 WebView OCULTO, shown=false, 1920x1080`
+a pesar de que el paso 08 había confirmado la ejecución de JavaScript.
+Esto significa que el motor cargó la página pero el objeto WebView era invisible.
+La siguiente prueba **solo para el documento local `/o-smoke/index.html`**
+ignora temporalmente las banderas internas que ocultan el WebView, registra el
+valor original de la máscara y muestra el navegador forzadamente. Es una prueba
+de diagnóstico, **no** una solución válida para el manejo de aplicaciones HbbTV
+reales, que deben poder ocultarse legítimamente.
+
 ## Criterios de validación
 
 - **Nivel 1, compilación:** workflow verde con APK realmente generada.
