@@ -67,6 +67,24 @@ patch(
     "    compileSdkVersion 33",
 )
 
+# Current ORB adds a required decoder-capabilities callback that its old 2.0.3
+# mock application did not implement. The isolated sample advertises no decoder
+# until we can query real playback capabilities on the test hardware.
+callback_file = orb / "android/mock203app/src/main/java/org/orbtv/mock203app/MockOrbSessionCallback.java"
+callback_src = callback_file.read_text(encoding="utf-8")
+callback_at = "    @Override\n    public BridgeTypes.SystemInformation getSystemInformation() {"
+if callback_src.count(callback_at) != 1:
+    raise RuntimeError("Missing expected ORB mock callback insertion point")
+callback_src = callback_src.replace(
+    callback_at,
+    "    @Override\n"
+    "    public java.util.List<String> getBroadcastCapabilities(int decoderIndex) {\n"
+    "        return new java.util.ArrayList<>(); // Mock broadcast decoder not wired\n"
+    "    }\n\n" + callback_at,
+    1,
+)
+callback_file.write_text(callback_src, encoding="utf-8")
+
 # Make the upstream mock tester a visible Android TV app and keep its package
 # org.orbtv.mock203app, entirely separate from com.ayanabyte.one.
 patch(
