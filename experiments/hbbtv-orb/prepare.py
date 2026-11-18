@@ -215,4 +215,67 @@ patch(http,
     "        }\n"
     "        String type = \"*/*\";")
 
+
+# The first TCL test reached JavaScript but showed only grey. The second stage
+# isolates actual WebView visibility/paint rather than claiming HbbTV is usable.
+# A stock AOSP WebView on a TV can fail to composite with forced software layers.
+patch(
+    "android/orblibrary/src/main/java/org/orbtv/orblibrary/OrbSession.java",
+    "mBrowserView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);",
+    "mBrowserView.setLayerType(View.LAYER_TYPE_HARDWARE, null);",
+)
+
+browser = "android/orblibrary/src/main/java/org/orbtv/orblibrary/BrowserView.java"
+patch(
+    browser,
+    "            @Override\n            public void onPageCommitVisible(WebView view, String url) {",
+    "            @Override\n"
+    "            public void onPageFinished(WebView view, String url) {\n"
+    "                super.onPageFinished(view, url);\n"
+    "                Log.i(\"O_ORB_POC\", \"WEBVIEW_PAGE_FINISHED url=\" + url);\n"
+    "                // Some stock Android TV WebViews do not invoke onPageCommitVisible\n"
+    "                // when the WebView began life INVISIBLE. Unblock first paint.\n"
+    "                if (url != null && !url.startsWith(\"about:blank\") && !mVisibilityOverride) {\n"
+    "                    Log.i(\"O_ORB_POC\", \"VISIBILITY_FALLBACK_ON_PAGE_FINISHED\");\n"
+    "                    mVisibilityOverride = true;\n"
+    "                    setHiddenFlag(mHiddenMask);\n"
+    "                }\n"
+    "            }\n\n"
+    "            @Override\n"
+    "            public void onPageCommitVisible(WebView view, String url) {\n"
+    "                Log.i(\"O_ORB_POC\", \"WEBVIEW_PAGE_COMMIT_VISIBLE url=\" + url);",
+)
+
+# Native 09 status confirms whether the actual ORB WebView became visible,
+# separate from the onload/JS 08 status; no screenshots, permissions or uploads.
+patch(
+    main,
+    "    @Override\n    protected void onDestroy() {",
+    "    public void inspectBrowserVisibility() {\n"
+    "        runOnUiThread(() -> new android.os.Handler(android.os.Looper.getMainLooper())\n"
+    "            .postDelayed(() -> {\n"
+    "                FrameLayout frame = findViewById(R.id.frameLayout);\n"
+    "                android.view.View root = frame.getChildAt(0);\n"
+    "                android.view.View browser = root;\n"
+    "                if (root instanceof android.view.ViewGroup) {\n"
+    "                    browser = ((android.view.ViewGroup) root).getChildAt(0);\n"
+    "                }\n"
+    "                if (browser != null) {\n"
+    "                    setLabStatus(\"09 WebView \" + (browser.getVisibility() == 0 ? \"VISIBLE\" : \"OCULTO\")\n"
+    "                        + \", shown=\" + browser.isShown() + \", \"\n"
+    "                        + browser.getWidth() + \"x\" + browser.getHeight());\n"
+    "                } else {\n"
+    "                    setLabStatus(\"09 WebView no encontrado\");\n"
+    "                }\n"
+    "            }, 1600));\n"
+    "    }\n\n"
+    "    @Override\n    protected void onDestroy() {",
+)
+patch(
+    http,
+    "                        ((MainActivity) mContext).setLabStatus(\"08 HbbTV ejecutado: JavaScript OK\");",
+    "                        ((MainActivity) mContext).setLabStatus(\"08 HbbTV ejecutado: JavaScript OK\");\n"
+    "                        ((MainActivity) mContext).inspectBrowserVisibility();",
+)
+
 print("ORB smoke test prepared; main O! application is not involved.")
