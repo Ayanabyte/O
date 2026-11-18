@@ -67,7 +67,7 @@ patch(
     "    compileSdkVersion 33",
 )
 
-# Current ORB adds a required decoder-capabilities callback that its old 2.0.3
+# Current ORB adds required decoder-capabilities callbacks that its old 2.0.3
 # mock application did not implement. The isolated sample advertises no decoder
 # until we can query real playback capabilities on the test hardware.
 callback_file = orb / "android/mock203app/src/main/java/org/orbtv/mock203app/MockOrbSessionCallback.java"
@@ -77,6 +77,10 @@ if callback_src.count(callback_at) != 1:
     raise RuntimeError("Missing expected ORB mock callback insertion point")
 callback_src = callback_src.replace(
     callback_at,
+    "    @Override\n"
+    "    public java.util.List<String> getBroadbandCapabilities(int decoderIndex) {\n"
+    "        return null; // No real broadband decoder in mock harness\n"
+    "    }\n\n"
     "    @Override\n"
     "    public java.util.List<String> getBroadcastCapabilities(int decoderIndex) {\n"
     "        return new java.util.ArrayList<>(); // Mock broadcast decoder not wired\n"
