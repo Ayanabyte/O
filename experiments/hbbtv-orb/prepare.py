@@ -177,8 +177,9 @@ patch(callback,
     "                        mMainActivity.setLabStatus(\"05 Escenario local cargado; simulando sintonización\");\n"
     "                        setDsmccData(dsmccData);")
 patch(callback,
-    "        mSession = session;\n        mTestSuiteRunner.run();",
+    "        mSession = session;\n        Log.i(\"O_ORB_POC\", \"SESSION_READY\");\n        mTestSuiteRunner.run();",
     "        mSession = session;\n"
+    "        Log.i(\"O_ORB_POC\", \"SESSION_READY\");\n"
     "        mMainActivity.setLabStatus(\"04 SESSION_READY: ORB iniciado\");\n"
     "        mTestSuiteRunner.run();")
 patch(callback,
