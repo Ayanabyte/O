@@ -116,4 +116,102 @@ target.mkdir(parents=True, exist_ok=True)
 for name in ("manifest.json", "scenario.json", "index.html"):
     shutil.copy2(here / name, target / name)
 
+
+# Visible on-screen boot diagnostics: a plain grey background was observed on
+# TCL Android TV, so the test must show progress before ORB renders any HTML.
+# Keep the native overlay visible and behind no WebView; do not mask failures.
+main = "android/mock203app/src/main/java/org/orbtv/mock203app/MainActivity.java"
+patch(main,
+    "    private IOrbSession mTvBrowserSession = null;",
+    "    private IOrbSession mTvBrowserSession = null;\n"
+    "    private android.widget.TextView mLabStatus;\n")
+patch(main,
+    "        setContentView(R.layout.activity_main);\n        Bundle extras = getIntent().getExtras();",
+    "        setContentView(R.layout.activity_main);\n"
+    "        FrameLayout frameLayout = findViewById(R.id.frameLayout);\n"
+    "        mLabStatus = new android.widget.TextView(this);\n"
+    "        mLabStatus.setTextColor(android.graphics.Color.WHITE);\n"
+    "        mLabStatus.setTextSize(18);\n"
+    "        mLabStatus.setPadding(22, 14, 22, 14);\n"
+    "        mLabStatus.setBackgroundColor(0xDD111111);\n"
+    "        mLabStatus.setClickable(false);\n"
+    "        mLabStatus.setFocusable(false);\n"
+    "        FrameLayout.LayoutParams labParams = new FrameLayout.LayoutParams(\n"
+    "                FrameLayout.LayoutParams.WRAP_CONTENT,\n"
+    "                FrameLayout.LayoutParams.WRAP_CONTENT,\n"
+    "                android.view.Gravity.TOP | android.view.Gravity.LEFT);\n"
+    "        labParams.setMargins(24, 24, 24, 24);\n"
+    "        frameLayout.addView(mLabStatus, labParams);\n"
+    "        setLabStatus(\"01 Iniciando laboratorio...\");\n"
+    "        Bundle extras = getIntent().getExtras();")
+patch(main,
+    "        FrameLayout frameLayout = findViewById(R.id.frameLayout);\n        mTvBrowserSession = OrbSessionFactory.createSession(",
+    "        setLabStatus(\"03 Inicializando motor ORB...\");\n"
+    "        mTvBrowserSession = OrbSessionFactory.createSession(")
+patch(main,
+    "            e.printStackTrace();\n            Log.d(\"orb_automation_msg\", \"finished\");",
+    "            Log.e(\"O_ORB_POC\", \"ERROR preparando tests\", e);\n"
+    "            setLabStatus(\"ERROR preparando pruebas: \" + e.getClass().getSimpleName() + \": \" + e.getMessage());\n"
+    "            Log.d(\"orb_automation_msg\", \"finished\");")
+patch(main,
+    "        frameLayout.addView(mTvBrowserSession.getView());",
+    "        frameLayout.addView(mTvBrowserSession.getView(), 0);")
+patch(main,
+    "    @Override\n    protected void onDestroy() {",
+    "    public void setLabStatus(final String status) {\n"
+    "        Log.i(\"O_ORB_POC\", status);\n"
+    "        runOnUiThread(() -> {\n"
+    "            if (mLabStatus != null) mLabStatus.setText(\"O! HbbTV ORB LAB\\n\" + status);\n"
+    "        });\n"
+    "    }\n\n"
+    "    @Override\n    protected void onDestroy() {")
+
+callback = "android/mock203app/src/main/java/org/orbtv/mock203app/MockOrbSessionCallback.java"
+patch(callback,
+    "mServer = new MockHttpServer(mContext);",
+    "mServer = new MockHttpServer(mMainActivity);\n"
+    "        mMainActivity.setLabStatus(\"02 Servidor HTTP local preparado\");")
+patch(callback,
+    "                        mTestSuiteScenario = scenario;\n                        setDsmccData(dsmccData);",
+    "                        mTestSuiteScenario = scenario;\n"
+    "                        mMainActivity.setLabStatus(\"05 Escenario local cargado; simulando sintonización\");\n"
+    "                        setDsmccData(dsmccData);")
+patch(callback,
+    "        mSession = session;\n        mTestSuiteRunner.run();",
+    "        mSession = session;\n"
+    "        mMainActivity.setLabStatus(\"04 SESSION_READY: ORB iniciado\");\n"
+    "        mTestSuiteRunner.run();")
+patch(callback,
+    "                mSession.processAitSection(506, channel.sid, mTestSuiteScenario.getCurrentChannelAit());",
+    "                mMainActivity.setLabStatus(\"06 Enviando AIT simulada a ORB...\");\n"
+    "                mSession.processAitSection(506, channel.sid, mTestSuiteScenario.getCurrentChannelAit());")
+
+# HbbTV expects the application/xhtml MIME type: the original mock server
+# mapped .html to text/html, which can prevent special HbbTV document handling.
+http = "android/mock203app/src/main/java/org/orbtv/mock203app/MockHttpServer.java"
+patch(http,
+    "                Log.d(TAG, \"Get path: \" + path);\n                okio.Buffer body = getAsset(path);",
+    "                Log.d(TAG, \"Get path: \" + path);\n"
+    "                if (path != null && path.startsWith(\"/o-smoke/ready\")) {\n"
+    "                    Log.i(\"O_ORB_POC\", \"DOCUMENT_LOADED_FROM_WEB\");\n"
+    "                    if (mContext instanceof MainActivity) {\n"
+    "                        ((MainActivity) mContext).setLabStatus(\"08 HbbTV ejecutado: JavaScript OK\");\n"
+    "                    }\n"
+    "                    return new MockResponse().setResponseCode(204);\n"
+    "                }\n"
+    "                if (path != null && path.startsWith(\"/o-smoke/index.html\")) {\n"
+    "                    Log.i(\"O_ORB_POC\", \"HBBTV_DOCUMENT_REQUESTED\");\n"
+    "                    if (mContext instanceof MainActivity) {\n"
+    "                        ((MainActivity) mContext).setLabStatus(\"07 Página HbbTV solicitada por ORB\");\n"
+    "                    }\n"
+    "                }\n"
+    "                okio.Buffer body = getAsset(path);")
+patch(http,
+    "    private String getMimeTypeFromUrl(String url) {\n        String type = \"*/*\";",
+    "    private String getMimeTypeFromUrl(String url) {\n"
+    "        if (url.startsWith(\"/o-smoke/\") && url.endsWith(\".html\")) {\n"
+    "            return \"application/vnd.hbbtv.xhtml+xml; charset=UTF-8\";\n"
+    "        }\n"
+    "        String type = \"*/*\";")
+
 print("ORB smoke test prepared; main O! application is not involved.")
