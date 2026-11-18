@@ -31,6 +31,9 @@
       var app = mgr && mgr.getOwnerApplication ? mgr.getOwnerApplication(document) : null;
       if (app) {
         setText('capability', 'OIPF: aplicación reconocida por ORB');
+        // Broadcast-related HbbTV applications start hidden and must request presentation.
+        app.show();
+        log('APPLICATION_SHOW_REQUESTED');
         if (app.privateData && app.privateData.keyset) {
           app.privateData.keyset.setValue(0x1FF);
         }

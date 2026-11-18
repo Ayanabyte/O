@@ -283,51 +283,9 @@ patch(
 )
 
 
-# TCL 09 diagnostic showed the ORB WebView itself is INVISIBLE, even though
-# 1920x1080 and the document's JavaScript executed. Force visibility only for
-# the local o-smoke test page, to distinguish app-state flags from rendering.
-# This is a LAB workaround, not correct visibility handling for production.
-patch(
-    browser,
-    "    private boolean mVisibilityOverride = false;\n",
-    "    private boolean mVisibilityOverride = false;\n"
-    "    private boolean mSmokeTestForceVisible = false;\n",
-)
-patch(
-    browser,
-    "        mVisibilityOverride = false;\n        mIrrecoverableNotified = false;",
-    "        mVisibilityOverride = false;\n"
-    "        mIrrecoverableNotified = false;\n"
-    "        mSmokeTestForceVisible = entryUrl != null\n"
-    "                && entryUrl.contains(\"/o-smoke/index.html\");\n"
-    "        if (mSmokeTestForceVisible) {\n"
-    "            Log.i(\"O_ORB_POC\", \"LAB_FORCE_VISIBLE_START mask=\" + mHiddenMask);\n"
-    "        }",
-)
-patch(
-    browser,
-    "        mHiddenMask |= flag;\n        if (mHiddenMask == 0 && mVisibilityOverride) {",
-    "        mHiddenMask |= flag;\n"
-    "        if (mSmokeTestForceVisible) {\n"
-    "            Log.i(\"O_ORB_POC\", \"LAB_FORCE_VISIBLE setFlag=\" + flag\n"
-    "                    + \" mask=\" + mHiddenMask);\n"
-    "            super.setVisibility(View.VISIBLE);\n"
-    "            return;\n"
-    "        }\n"
-    "        if (mHiddenMask == 0 && mVisibilityOverride) {",
-)
-patch(
-    browser,
-    "        mHiddenMask &= ~flag;\n        if (mHiddenMask == 0 && mVisibilityOverride) {",
-    "        mHiddenMask &= ~flag;\n"
-    "        if (mSmokeTestForceVisible) {\n"
-    "            Log.i(\"O_ORB_POC\", \"LAB_FORCE_VISIBLE unsetFlag=\" + flag\n"
-    "                    + \" mask=\" + mHiddenMask);\n"
-    "            super.setVisibility(View.VISIBLE);\n"
-    "            return;\n"
-    "        }\n"
-    "        if (mHiddenMask == 0 && mVisibilityOverride) {",
-)
+# Keep the ORB visibility mask authoritative. The local HbbTV document calls
+# Application.show(), as a broadcast-related application must, instead of
+# bypassing the engine's visibility state.
 patch(
     main,
     "        FrameLayout frameLayout = findViewById(R.id.frameLayout);\n"
