@@ -52,6 +52,15 @@ patch(
     "    implementation 'org.chromium.net:cronet-embedded:119.6045.31'",
 )
 
+# AndroidX Core from transitive dependencies uses android:attr/lStar (API 31).
+# The historical library modules target compileSdk 28, which breaks AAPT.
+for module in ("orblibrary", "orbpolyfill"):
+    patch(
+        f"android/{module}/build.gradle",
+        "    compileSdkVersion 28",
+        "    compileSdkVersion 31",
+    )
+
 # Make the upstream mock tester a visible Android TV app and keep its package
 # org.orbtv.mock203app, entirely separate from com.ayanabyte.one.
 patch(
