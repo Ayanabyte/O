@@ -42,6 +42,16 @@ patch(
     '    "../../components/network_services/media_switcher/media_switcher.cpp"',
 )
 
+# OrbCronet.java (added upstream) imports org.chromium.net but the legacy Android
+# Gradle module omits its Maven dependencies. Pin compatible published binaries.
+patch(
+    "android/orblibrary/build.gradle",
+    "    implementation 'com.squareup.okhttp3:okhttp:3.14.9'",
+    "    implementation 'com.squareup.okhttp3:okhttp:3.14.9'\n"
+    "    implementation 'org.chromium.net:cronet-api:119.6045.31'\n"
+    "    implementation 'org.chromium.net:cronet-embedded:119.6045.31'",
+)
+
 # Make the upstream mock tester a visible Android TV app and keep its package
 # org.orbtv.mock203app, entirely separate from com.ayanabyte.one.
 patch(
