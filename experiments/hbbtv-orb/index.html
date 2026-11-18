@@ -21,6 +21,9 @@
   function init() {
     setText('state', 'Documento HbbTV iniciado');
     log('DOCUMENT_LOADED');
+    // Independent confirmation that JavaScript executed inside the ORB document.
+    var ping = new Image();
+    ping.src = '/o-smoke/ready?t=' + Date.now();
     var hasFactory = typeof window.oipfObjectFactory !== 'undefined';
     setText('capability', 'API OIPF: ' + (hasFactory ? 'presente' : 'no detectada'));
     try {
