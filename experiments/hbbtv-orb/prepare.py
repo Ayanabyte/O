@@ -27,6 +27,21 @@ if gradle_source.count("jcenter()") != 2:
     raise RuntimeError("Expected exactly two JCenter repositories in ORB upstream build")
 gradle.write_text(gradle_source.replace("jcenter()", "mavenCentral()"), encoding="utf-8")
 
+# Current ORB main uses MediaSwitcher in JNI but does not yet add its
+# source/include directory to the historical Android CMake target.
+patch(
+    "android/orblibrary/CMakeLists.txt",
+    "   ../../components/network_services/media_synchroniser\n",
+    "   ../../components/network_services/media_synchroniser\n"
+    "   ../../components/network_services/media_switcher\n",
+)
+patch(
+    "android/orblibrary/CMakeLists.txt",
+    '    "../../components/network_services/app2app/app2app_remote_service.cpp"',
+    '    "../../components/network_services/app2app/app2app_remote_service.cpp"\n'
+    '    "../../components/network_services/media_switcher/media_switcher.cpp"',
+)
+
 # Make the upstream mock tester a visible Android TV app and keep its package
 # org.orbtv.mock203app, entirely separate from com.ayanabyte.one.
 patch(
