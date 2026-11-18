@@ -47,10 +47,16 @@
     document.addEventListener('keydown', function(event) {
       var code = event.keyCode || event.which || 0;
       setText('key', 'Tecla recibida: ' + code);
-      // Diagnostic: trigger a complete document repaint on TV WebView.
-      var root = document.documentElement;
-      root.style.visibility = 'hidden';
-      window.requestAnimationFrame(function() { root.style.visibility = 'visible'; });
+      // Coalesce down/up and repeat events, then refresh the full TV document.
+      if (event.type === 'keydown' && !event.repeat) {
+        var root = document.documentElement;
+        root.style.visibility = 'hidden';
+        window.clearTimeout(window.__orbRepaintTimer);
+        window.__orbRepaintTimer = window.setTimeout(function() {
+          root.style.visibility = 'visible';
+          window.__orbRepaintTimer = 0;
+        }, 50);
+      }
       log('KEY_' + code);
     }, false);
   }
