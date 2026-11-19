@@ -1,0 +1,6 @@
+<!-- Add this inside <application> in android/mock203app/src/main/AndroidManifest.xml. -->
+<activity
+    android:name="org.orbtv.mock203app.TdtTvViewTestActivity"
+    android:exported="true"
+    android:label="Prueba TDT TCL"
+    android:screenOrientation="landscape" />
