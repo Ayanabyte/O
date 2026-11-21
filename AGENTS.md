@@ -10,3 +10,10 @@
 - Priorizar arquitectura sencilla, modular y testeable. Antes de implementar funciones complejas, documentar límites de Android TV y soporte del hardware.
 - No mover código al repositorio principal sin compilar la APK de depuración en GitHub Actions.
 - Mantener el README y ROADMAP actualizados cuando una función esté realmente probada.
+
+## Política de identidad y dependencias
+
+- La única identidad de aplicación de O! es `com.ayanabyte.one`; conservar esta identidad en código, recursos, Gradle, manifiestos, documentación y variantes de compilación.
+- No incorporar archivos, paquetes, imports, fuentes ni parches de aplicaciones Android anteriores. La investigación de motores HbbTV de fabricante se realiza en un laboratorio independiente y no forma parte del código de producción.
+- El acceso LOVEStv actualmente admitido desde O! es un Intent explícito a la app nativa `com.tcl.tv`, usando el canal real de `TvContract`. No invocar aplicaciones de demostración como dependencia de producto.
+- Ejecutar `python3 .github/scripts/check_identity.py` antes de cada PR. La compilación de CI debe rechazar identificadores heredados.
