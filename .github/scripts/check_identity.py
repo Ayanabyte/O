@@ -24,7 +24,7 @@ RETIRED = tuple(
 )
 
 def compact(text: str) -> str:
-    return re.sub(r"[ \\t_-]", "", text.casefold())
+    return re.sub(r"[\s_-]", "", text.casefold())
 
 
 def main() -> int:
